@@ -17,10 +17,12 @@ DEFAULT_REPORT = ROOT / "reports" / "asr_pseudolabel_promotion.json"
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -31,6 +33,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def convert_row(row: dict, assume_single_speaker: bool, assume_no_music: bool) -> dict:
+    """Convert row for this pipeline stage."""
     return {
         "segment_id": row["segment_id"],
         "audio_path": row["audio_path"],
@@ -47,6 +50,7 @@ def convert_row(row: dict, assume_single_speaker: bool, assume_no_music: bool) -
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     rows = []
     skipped_empty = 0

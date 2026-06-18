@@ -14,14 +14,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_config(name: str) -> dict:
+    """Load config for this pipeline stage."""
     return yaml.safe_load((ROOT / "configs" / f"{name}.yaml").read_text(encoding="utf-8"))
 
 
 def exists(path: str) -> bool:
+    """Exists for this pipeline stage."""
     return (ROOT / path).exists()
 
 
 def csv_has_rows(path: str) -> bool:
+    """Csv has rows for this pipeline stage."""
     resolved = ROOT / path
     if not resolved.exists():
         return False
@@ -30,6 +33,7 @@ def csv_has_rows(path: str) -> bool:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     mt = load_config("mt")
     asr = load_config("asr")
     tts = load_config("tts")

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Bootstrap and packaging helper for reproducible local project setup."""
+
 from __future__ import annotations
 
 import csv
@@ -15,6 +17,7 @@ SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".flac", ".m4a", ".ogg"}
 
 
 def probe_duration(audio_path: Path) -> float | None:
+    """Probe duration for this pipeline stage."""
     result = subprocess.run(
         [
             "ffprobe",
@@ -39,6 +42,7 @@ def probe_duration(audio_path: Path) -> float | None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +71,9 @@ def main() -> None:
             total_duration += duration
 
     with MANIFEST_PATH.open("w", encoding="utf-8", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=["path", "suffix", "duration_sec", "size_bytes"])
+        writer = csv.DictWriter(
+            csvfile, fieldnames=["path", "suffix", "duration_sec", "size_bytes"]
+        )
         writer.writeheader()
         writer.writerows(rows)
 

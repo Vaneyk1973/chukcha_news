@@ -22,12 +22,14 @@ from chukcha_news.mt.modeling import (  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     return parser.parse_args()
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     try:
         from transformers import AutoTokenizer
     except ImportError as error:
@@ -48,11 +50,7 @@ def main() -> None:
             direction[f"initialize_{chukchi_side}_language_from"],
         )
         configure_tokenizer(tokenizer, direction)
-        source_text = (
-            "Сегодня хорошие новости."
-            if name == "ru_ckt"
-            else "Ԓыгъоравэтԓьэн."
-        )
+        source_text = "Сегодня хорошие новости." if name == "ru_ckt" else "Ԓыгъоравэтԓьэн."
         encoded = tokenizer(source_text)
         chukchi_text = "Ԓыгъоравэтԓьэн ӄытгъэргъын ӈинӄэй."
         chukchi_encoded = tokenizer(chukchi_text, add_special_tokens=False)

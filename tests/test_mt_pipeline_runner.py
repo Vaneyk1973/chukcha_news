@@ -1,3 +1,5 @@
+"""Regression tests for the Chukchi News Voice pipeline."""
+
 import importlib.util
 import json
 from pathlib import Path
@@ -11,6 +13,9 @@ SPEC.loader.exec_module(runner)
 
 
 def test_latest_checkpoint_uses_highest_step(tmp_path: Path) -> None:
+    """
+    Exercise the `test_latest_checkpoint_uses_highest_step` behavior and guard against regressions.
+    """
     (tmp_path / "checkpoint-9").mkdir()
     (tmp_path / "checkpoint-100").mkdir()
     (tmp_path / "checkpoint-invalid").mkdir()
@@ -19,6 +24,9 @@ def test_latest_checkpoint_uses_highest_step(tmp_path: Path) -> None:
 
 
 def test_archive_existing_log_moves_previous_file(tmp_path: Path) -> None:
+    """
+    Exercise the `test_archive_existing_log_moves_previous_file` behavior and guard against regressions.
+    """
     log_path = tmp_path / "stage.log"
     log_path.write_text("old log", encoding="utf-8")
 
@@ -31,6 +39,9 @@ def test_archive_existing_log_moves_previous_file(tmp_path: Path) -> None:
 
 
 def test_build_summary_calculates_improvement(tmp_path: Path, monkeypatch) -> None:
+    """
+    Exercise the `test_build_summary_calculates_improvement` behavior and guard against regressions.
+    """
     monkeypatch.setattr(runner, "ROOT", tmp_path)
     for label, chrf, bleu, cer in (
         ("trained", 50.0, 20.0, 0.3),
@@ -38,9 +49,7 @@ def test_build_summary_calculates_improvement(tmp_path: Path, monkeypatch) -> No
     ):
         path = tmp_path / "reports" / "mt" / "ru_ckt" / label / "metrics.json"
         path.parent.mkdir(parents=True)
-        path.write_text(
-            json.dumps({"chrf": chrf, "bleu": bleu, "cer": cer}), encoding="utf-8"
-        )
+        path.write_text(json.dumps({"chrf": chrf, "bleu": bleu, "cer": cer}), encoding="utf-8")
 
     summary = runner.build_summary()
 

@@ -24,6 +24,7 @@ DEFAULT_REPORT = ROOT / "reports" / "asr_chukchi_text_scores.json"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
     parser.add_argument("--input", type=Path, default=DEFAULT_ASR)
@@ -39,6 +40,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def train_or_load(args: argparse.Namespace) -> CharNgramLM:
+    """Train or load for this pipeline stage."""
     if args.model.exists() and not args.retrain:
         return CharNgramLM.load(args.model)
     texts = args.corpus.read_text(encoding="utf-8").splitlines()
@@ -48,12 +50,14 @@ def train_or_load(args: argparse.Namespace) -> CharNgramLM:
 
 
 def read_rows(path: Path, limit: int | None) -> list[dict]:
+    """Read rows for this pipeline stage."""
     with path.open("r", encoding="utf-8", newline="") as input_file:
         rows = list(csv.DictReader(input_file))
     return rows[:limit] if limit else rows
 
 
 def decision(score: float, keep_threshold: float, reject_threshold: float) -> str:
+    """Decision for this pipeline stage."""
     if score >= keep_threshold:
         return "chukchi_text"
     if score < reject_threshold:
@@ -62,6 +66,7 @@ def decision(score: float, keep_threshold: float, reject_threshold: float) -> st
 
 
 def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fieldnames, extrasaction="ignore")
@@ -70,6 +75,7 @@ def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     lm = train_or_load(args)
     rows = read_rows(args.input, args.limit)
@@ -93,7 +99,9 @@ def main() -> None:
             }
         )
 
-    fields = list(csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or [])
+    fields = list(
+        csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or []
+    )
     extra = [
         "normalized_transcript",
         "chukchi_lm_score",
@@ -105,7 +113,11 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(args.output_dir / "all.csv", scored, fields)
     for label in counts:
-        write_csv(args.output_dir / f"{label}.csv", [row for row in scored if row["chukchi_text_class"] == label], fields)
+        write_csv(
+            args.output_dir / f"{label}.csv",
+            [row for row in scored if row["chukchi_text_class"] == label],
+            fields,
+        )
 
     report = {
         "input": str(args.input),

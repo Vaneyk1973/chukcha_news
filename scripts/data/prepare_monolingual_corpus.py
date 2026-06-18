@@ -17,19 +17,23 @@ DEFAULT_OUTPUT = ROOT / "data" / "interim" / "chukchi_monolingual.txt"
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     return re.sub(r"\s+", " ", text).strip()
 
 
 def load_hse_sentences(path: Path) -> list[str]:
+    """Load hse sentences for this pipeline stage."""
     with path.open("r", encoding="utf-8", newline="") as input_file:
         return [row["ckt"] for row in csv.DictReader(input_file) if row.get("ckt")]
 
 
 def load_text_lines(path: Path) -> list[str]:
+    """Load text lines for this pipeline stage."""
     return path.read_text(encoding="utf-8").splitlines()
 
 
 def load_asr_transcripts(path: Path) -> list[str]:
+    """Load asr transcripts for this pipeline stage."""
     if not path.exists():
         return []
     with path.open("r", encoding="utf-8", newline="") as input_file:
@@ -37,6 +41,7 @@ def load_asr_transcripts(path: Path) -> list[str]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--hse-corpus", type=Path, default=DEFAULT_HSE_CORPUS)
     parser.add_argument("--fieldasr-corpus", type=Path, default=DEFAULT_FIELDASR_CORPUS)
@@ -47,6 +52,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     sentences = load_hse_sentences(args.hse_corpus)
     sentences.extend(load_text_lines(args.fieldasr_corpus))

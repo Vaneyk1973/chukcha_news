@@ -66,6 +66,7 @@ RUNTIME_PATHS = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
@@ -80,6 +81,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def sha256(path: Path) -> str:
+    """Sha256 for this pipeline stage."""
     digest = hashlib.sha256()
     with path.open("rb") as input_file:
         while chunk := input_file.read(CHUNK_SIZE):
@@ -88,12 +90,14 @@ def sha256(path: Path) -> str:
 
 
 def iter_files(path: Path) -> list[Path]:
+    """Iter files for this pipeline stage."""
     if path.is_file():
         return [path]
     return [file for file in sorted(path.rglob("*")) if file.is_file()]
 
 
 def link_or_copy(source: Path, target: Path, mode: str) -> None:
+    """Link or copy for this pipeline stage."""
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         target.unlink()
@@ -108,12 +112,16 @@ def link_or_copy(source: Path, target: Path, mode: str) -> None:
 
 
 def hf_cache_dir(repo_id: str) -> Path:
+    """Hf cache dir for this pipeline stage."""
     return HF_CACHE / f"models--{repo_id.replace('/', '--')}"
 
 
 def latest_hf_snapshot(repo_id: str) -> Path:
+    """Latest hf snapshot for this pipeline stage."""
     snapshots = hf_cache_dir(repo_id) / "snapshots"
-    candidates = [path for path in snapshots.iterdir() if path.is_dir()] if snapshots.exists() else []
+    candidates = (
+        [path for path in snapshots.iterdir() if path.is_dir()] if snapshots.exists() else []
+    )
     if not candidates:
         raise FileNotFoundError(
             f"Missing local HF snapshot for {repo_id}. Download it first with "
@@ -123,6 +131,7 @@ def latest_hf_snapshot(repo_id: str) -> Path:
 
 
 def package_hf_base_models(output: Path, mode: str) -> int:
+    """Package hf base models for this pipeline stage."""
     copied = 0
     for repo_id, target_relative in HF_BASE_MODELS.items():
         snapshot = latest_hf_snapshot(repo_id)
@@ -136,6 +145,7 @@ def package_hf_base_models(output: Path, mode: str) -> int:
 
 
 def rewrite_packaged_server_config(output: Path) -> None:
+    """Rewrite packaged server config for this pipeline stage."""
     path = output / "configs" / "server.yaml"
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     qwen_path = HF_BASE_MODELS["Qwen/Qwen2.5-7B-Instruct"]
@@ -162,6 +172,7 @@ def rewrite_packaged_server_config(output: Path) -> None:
 
 
 def write_readme(output: Path, total_bytes: int, file_count: int) -> None:
+    """Write readme for this pipeline stage."""
     readme = f"""# Runtime-артефакты Chukchi News Voice
 
 Этот бандл содержит тяжелые локальные артефакты, необходимые для запуска `make serve`.
@@ -211,6 +222,7 @@ make serve
 
 
 def create_manifest(output: Path) -> dict:
+    """Create manifest for this pipeline stage."""
     files = [path for path in sorted(output.rglob("*")) if path.is_file()]
     entries = []
     for index, path in enumerate(files, start=1):
@@ -237,6 +249,7 @@ def create_manifest(output: Path) -> dict:
 
 
 def verify(output: Path) -> None:
+    """Verify for this pipeline stage."""
     manifest_path = output / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     missing = []
@@ -256,6 +269,7 @@ def verify(output: Path) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     output = args.output if args.output.is_absolute() else ROOT / args.output
     if args.verify_only:

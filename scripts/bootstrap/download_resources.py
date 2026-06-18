@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+"""Bootstrap and packaging helper for reproducible local project setup."""
+
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -14,10 +15,12 @@ CONFIG_PATH = ROOT / "configs" / "resources.yaml"
 
 
 def ensure_parent(path: Path) -> None:
+    """Ensure parent for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
 def download_file(url: str, target_path: Path) -> None:
+    """Download file for this pipeline stage."""
     ensure_parent(target_path)
     response = requests.get(url, timeout=60)
     response.raise_for_status()
@@ -25,6 +28,7 @@ def download_file(url: str, target_path: Path) -> None:
 
 
 def clone_repo(url: str, target_path: Path) -> None:
+    """Clone repo for this pipeline stage."""
     if target_path.exists():
         return
     ensure_parent(target_path)
@@ -32,11 +36,13 @@ def clone_repo(url: str, target_path: Path) -> None:
 
 
 def load_config() -> dict:
+    """Load config for this pipeline stage."""
     with CONFIG_PATH.open("r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     config = load_config()
 
     for entry in config.get("datasets", {}).values():

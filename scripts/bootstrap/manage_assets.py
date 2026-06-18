@@ -16,6 +16,7 @@ SUPPORTED_AUDIO_EXTENSIONS = {".flac", ".m4a", ".mp3", ".ogg", ".wav"}
 
 
 def sha256(path: Path) -> str:
+    """Sha256 for this pipeline stage."""
     digest = hashlib.sha256()
     with path.open("rb") as input_file:
         while chunk := input_file.read(CHUNK_SIZE):
@@ -24,6 +25,7 @@ def sha256(path: Path) -> str:
 
 
 def create_manifest(source: Path, output: Path) -> None:
+    """Create manifest for this pipeline stage."""
     files = [
         path
         for path in sorted(source.rglob("*"))
@@ -53,6 +55,7 @@ def create_manifest(source: Path, output: Path) -> None:
 
 
 def verify_manifest(manifest_path: Path) -> None:
+    """Verify manifest for this pipeline stage."""
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     missing = []
     invalid = []
@@ -73,6 +76,7 @@ def verify_manifest(manifest_path: Path) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["create", "verify"])
     parser.add_argument("--source", type=Path, default=ROOT / "audio")
@@ -81,6 +85,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     source = args.source if args.source.is_absolute() else ROOT / args.source
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest

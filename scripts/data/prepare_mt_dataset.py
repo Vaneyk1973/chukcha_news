@@ -20,11 +20,13 @@ from chukcha_news.config import load_yaml, resolve_path  # noqa: E402
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     text = text.replace("\u00a0", " ")
     return re.sub(r"\s+", " ", text).strip()
 
 
 def split_name(key: str, seed: str, train_ratio: float, validation_ratio: float) -> str:
+    """Split name for this pipeline stage."""
     digest = hashlib.sha256(f"{seed}\0{key}".encode("utf-8")).digest()
     value = int.from_bytes(digest[:8], "big") / 2**64
     if value < train_ratio:
@@ -35,6 +37,7 @@ def split_name(key: str, seed: str, train_ratio: float, validation_ratio: float)
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Write jsonl for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as output_file:
         for row in rows:
@@ -42,16 +45,19 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     return parser.parse_args()
 
 
 def word_count(text: str) -> int:
+    """Word count for this pipeline stage."""
     return len(re.findall(r"[A-Za-zА-Яа-яЁёӃӄӇӈԒԓ']+", text))
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     config = load_yaml(parse_args().config)
     data_config = config["data"]
     source_path = resolve_path(data_config["source_path"])
@@ -136,9 +142,9 @@ def main() -> None:
         for split in ("train", "validation", "test"):
             rows = [
                 {
-                    "id": hashlib.sha256(
-                        f"{row['ru']}\0{row['ckt']}".encode("utf-8")
-                    ).hexdigest()[:16],
+                    "id": hashlib.sha256(f"{row['ru']}\0{row['ckt']}".encode("utf-8")).hexdigest()[
+                        :16
+                    ],
                     "source_text": row[source_column],
                     "target_text": row[target_column],
                     "score": row["score"],

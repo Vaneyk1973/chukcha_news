@@ -37,6 +37,7 @@ WORD_RE = re.compile(r"[А-Яа-яЁёӃӄӇӈԒԓA-Za-z']+")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     parser.add_argument("--limit", type=int, default=100)
@@ -48,6 +49,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Read jsonl for this pipeline stage."""
     rows = []
     with path.open("r", encoding="utf-8") as input_file:
         for line in input_file:
@@ -57,6 +59,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def word_similarity(left: str, right: str) -> float:
+    """Word similarity for this pipeline stage."""
     left_tokens = [token.casefold() for token in WORD_RE.findall(left)]
     right_tokens = [token.casefold() for token in WORD_RE.findall(right)]
     if not left_tokens or not right_tokens:
@@ -69,7 +72,10 @@ def word_similarity(left: str, right: str) -> float:
 
 
 class MTModel:
+    """Document the state and behavior for the `MTModel` component."""
+
     def __init__(self, config: dict, direction_key: str) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
@@ -81,7 +87,9 @@ class MTModel:
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
         prefer_max_new_tokens(self.model)
-        ensure_vocabulary_tokens(self.tokenizer, self.model, config["tokenizer"]["additional_tokens"])
+        ensure_vocabulary_tokens(
+            self.tokenizer, self.model, config["tokenizer"]["additional_tokens"]
+        )
         chukchi_side = "target" if direction_key == "ru_ckt" else "source"
         ensure_language_token(
             self.tokenizer,
@@ -94,6 +102,7 @@ class MTModel:
         self.model.to(self.device).eval()
 
     def translate_batch(self, texts: list[str], batch_size: int) -> list[str]:
+        """Translate batch for this pipeline stage."""
         outputs = []
         for start in range(0, len(texts), batch_size):
             batch = texts[start : start + batch_size]
@@ -123,6 +132,7 @@ class MTModel:
         return outputs
 
     def close(self) -> None:
+        """Close for this pipeline stage."""
         del self.model
         del self.tokenizer
         if self.torch.cuda.is_available():
@@ -130,10 +140,12 @@ class MTModel:
 
 
 def mean(values: list[float]) -> float:
+    """Mean for this pipeline stage."""
     return sum(values) / len(values) if values else 0.0
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     rows = read_jsonl(resolve_path(config["directions"]["ru_ckt"]["test_file"]))
@@ -179,8 +191,7 @@ def main() -> None:
                 **repetition_features(generated_ckt[index]),
                 "repeat_collapse": repeat_collapse,
             }
-            | 
-            {
+            | {
                 "id": row["id"],
                 "corpus_source": row.get("corpus_source", ""),
                 "ru_source": row["source_text"],

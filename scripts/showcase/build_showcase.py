@@ -32,6 +32,8 @@ from chukcha_news.mt.modeling import (  # noqa: E402
 
 @dataclass(frozen=True)
 class ShowcaseCase:
+    """Document the state and behavior for the `ShowcaseCase` component."""
+
     slug: str
     title: str
     mode: str
@@ -145,6 +147,7 @@ CASES = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
@@ -156,6 +159,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def find_run(run_id: str) -> Path:
+    """Find run for this pipeline stage."""
     for root in SOURCE_ROOTS:
         candidate = root / run_id
         if candidate.exists():
@@ -164,10 +168,12 @@ def find_run(run_id: str) -> Path:
 
 
 def read_text(path: Path, default: str = "") -> str:
+    """Read text for this pipeline stage."""
     return path.read_text(encoding="utf-8").strip() if path.exists() else default
 
 
 def audio_duration(path: Path) -> float | None:
+    """Audio duration for this pipeline stage."""
     try:
         with wave.open(str(path), "rb") as audio:
             return audio.getnframes() / float(audio.getframerate())
@@ -176,15 +182,18 @@ def audio_duration(path: Path) -> float | None:
 
 
 def audio_data_uri(path: Path) -> str:
+    """Audio data uri for this pipeline stage."""
     payload = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:audio/wav;base64,{payload}"
 
 
 def esc(value: str) -> str:
+    """Esc for this pipeline stage."""
     return html.escape(value, quote=True)
 
 
 def settings_html(settings: dict[str, str]) -> str:
+    """Settings html for this pipeline stage."""
     return "\n".join(
         f"<div><span>{esc(key)}</span><strong>{esc(value)}</strong></div>"
         for key, value in settings.items()
@@ -192,6 +201,7 @@ def settings_html(settings: dict[str, str]) -> str:
 
 
 def stage(title: str, caption: str, text: str) -> str:
+    """Stage for this pipeline stage."""
     return f"""
       <article class="stage done">
         <header>
@@ -206,7 +216,10 @@ def stage(title: str, caption: str, text: str) -> str:
 
 
 class BacktranslationRuntime:
+    """Document the state and behavior for the `BacktranslationRuntime` component."""
+
     def __init__(self) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         self.config = load_yaml("configs/mt_clean.yaml")
         self.direction = self.config["directions"]["ckt_ru"]
         self.model_path = resolve_path("models/checkpoints/mt_clean/ckt_ru/final")
@@ -214,6 +227,7 @@ class BacktranslationRuntime:
             self.model_path = resolve_path(self.direction["output_dir"]) / "final"
 
     def __enter__(self) -> "BacktranslationRuntime":
+        """Acquire runtime resources required by this context manager."""
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
@@ -222,7 +236,9 @@ class BacktranslationRuntime:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path)
         prefer_max_new_tokens(self.model)
-        ensure_vocabulary_tokens(self.tokenizer, self.model, self.config["tokenizer"]["additional_tokens"])
+        ensure_vocabulary_tokens(
+            self.tokenizer, self.model, self.config["tokenizer"]["additional_tokens"]
+        )
         ensure_language_token(
             self.tokenizer,
             self.model,
@@ -234,12 +250,14 @@ class BacktranslationRuntime:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Release runtime resources owned by this context manager."""
         del self.model
         del self.tokenizer
         if self.torch.cuda.is_available():
             self.torch.cuda.empty_cache()
 
     def translate(self, text: str) -> str:
+        """Translate for this pipeline stage."""
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True).to(self.device)
         generation = {
             "num_beams": 4,
@@ -251,7 +269,10 @@ class BacktranslationRuntime:
         return self.tokenizer.decode(generated[0], skip_special_tokens=True).strip()
 
 
-def build_snapshot(case: ShowcaseCase, output: Path, backtranslator: BacktranslationRuntime | None) -> dict:
+def build_snapshot(
+    case: ShowcaseCase, output: Path, backtranslator: BacktranslationRuntime | None
+) -> dict:
+    """Build snapshot for this pipeline stage."""
     source = find_run(case.source_run)
     case_dir = output / case.slug
     case_dir.mkdir(parents=True, exist_ok=True)
@@ -266,7 +287,9 @@ def build_snapshot(case: ShowcaseCase, output: Path, backtranslator: Backtransla
     chukchi = read_text(source / "news_ckt.txt")
     back_ru = read_text(source / "news_back_ru.txt")
     prompt = read_text(source / "prompt.txt", case.prompt) or case.prompt
-    mode_label = "RU -> Chukchi -> Voice" if case.mode == "translated" else "Direct Chukchi -> Voice"
+    mode_label = (
+        "RU -> Chukchi -> Voice" if case.mode == "translated" else "Direct Chukchi -> Voice"
+    )
     duration = audio_duration(audio_target)
     duration_text = f"{duration:.1f} сек." if duration else "готово"
 
@@ -339,11 +362,14 @@ def build_snapshot(case: ShowcaseCase, output: Path, backtranslator: Backtransla
         "run_id": case.source_run,
         "path": str((case_dir / "index.html").relative_to(output)),
         "audio": str(audio_target.relative_to(output)),
-        "backtranslation": str((case_dir / "news_back_ru.txt").relative_to(output)) if (case_dir / "news_back_ru.txt").exists() else "",
+        "backtranslation": str((case_dir / "news_back_ru.txt").relative_to(output))
+        if (case_dir / "news_back_ru.txt").exists()
+        else "",
     }
 
 
 def write_css(output: Path) -> None:
+    """Write css for this pipeline stage."""
     (output / "showcase.css").write_text(
         """
 :root {
@@ -395,13 +421,16 @@ audio { width: 100%; margin-top: 2px; }
 
 
 def render_screenshots(output: Path, snapshots: list[dict]) -> None:
+    """Render screenshots for this pipeline stage."""
     chrome = (
         shutil.which("google-chrome")
         or shutil.which("chromium")
         or shutil.which("chromium-browser")
     )
     if not chrome:
-        print("[showcase] Chrome/Chromium is not available; HTML snapshots are ready without PNG previews.")
+        print(
+            "[showcase] Chrome/Chromium is not available; HTML snapshots are ready without PNG previews."
+        )
         return
 
     for row in snapshots:
@@ -422,14 +451,15 @@ def render_screenshots(output: Path, snapshots: list[dict]) -> None:
 
 
 def write_index(output: Path, snapshots: list[dict]) -> None:
+    """Write index for this pipeline stage."""
     cards = []
     for row in snapshots:
         cards.append(
             f"""
-        <a class="tile" href="{esc(row['path'])}">
-          <span class="pill">{esc(row['mode'])}</span>
-          <h2>{esc(row['title'])}</h2>
-          <p>Run ID: {esc(row['run_id'])}</p>
+        <a class="tile" href="{esc(row["path"])}">
+          <span class="pill">{esc(row["mode"])}</span>
+          <h2>{esc(row["title"])}</h2>
+          <p>Run ID: {esc(row["run_id"])}</p>
         </a>
             """
         )
@@ -456,7 +486,7 @@ def write_index(output: Path, snapshots: list[dict]) -> None:
         </div>
       </section>
       <section class="index-grid">
-        {''.join(cards)}
+        {"".join(cards)}
       </section>
     </main>
   </body>
@@ -471,6 +501,7 @@ def write_index(output: Path, snapshots: list[dict]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     output = args.output if args.output.is_absolute() else ROOT / args.output
     if output.exists():
@@ -484,7 +515,11 @@ def main() -> None:
             snapshots = [build_snapshot(case, output, backtranslator) for case in CASES]
     render_screenshots(output, snapshots)
     write_index(output, snapshots)
-    print(json.dumps({"output": str(output), "snapshots": len(snapshots)}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"output": str(output), "snapshots": len(snapshots)}, ensure_ascii=False, indent=2
+        )
+    )
 
 
 if __name__ == "__main__":

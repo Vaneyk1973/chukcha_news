@@ -20,6 +20,7 @@ DEFAULT_REPORT = ROOT / "reports" / "asr_cleaning.json"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--text-filter", type=Path, default=DEFAULT_TEXT_FILTER)
@@ -32,24 +33,30 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_rows(path: Path, limit: int | None = None) -> list[dict]:
+    """Read rows for this pipeline stage."""
     with path.open("r", encoding="utf-8", newline="") as input_file:
         rows = list(csv.DictReader(input_file))
     return rows[:limit] if limit else rows
 
 
 def read_optional_index(path: Path) -> dict[str, dict]:
+    """Read optional index for this pipeline stage."""
     if not path.exists():
         return {}
     return {row["segment_id"]: row for row in read_rows(path)}
 
 
 def split_reasons(value: str | None) -> list[str]:
+    """Split reasons for this pipeline stage."""
     if not value:
         return []
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def final_decision(row: dict, text_row: dict | None, score_row: dict | None) -> tuple[str, list[str]]:
+def final_decision(
+    row: dict, text_row: dict | None, score_row: dict | None
+) -> tuple[str, list[str]]:
+    """Final decision for this pipeline stage."""
     reasons: list[str] = []
     text_reasons = split_reasons((text_row or {}).get("text_filter_reasons"))
     if text_row is None:
@@ -73,7 +80,10 @@ def final_decision(row: dict, text_row: dict | None, score_row: dict | None) -> 
     return "kept", reasons
 
 
-def merge_row(row: dict, text_row: dict | None, score_row: dict | None, audio_row: dict | None) -> dict:
+def merge_row(
+    row: dict, text_row: dict | None, score_row: dict | None, audio_row: dict | None
+) -> dict:
+    """Merge row for this pipeline stage."""
     verdict, reasons = final_decision(row, text_row, score_row)
     merged = dict(row)
 
@@ -90,6 +100,7 @@ def merge_row(row: dict, text_row: dict | None, score_row: dict | None, audio_ro
 
 
 def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fieldnames, extrasaction="ignore")
@@ -98,6 +109,7 @@ def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
 
 
 def fieldnames(rows: list[dict]) -> list[str]:
+    """Fieldnames for this pipeline stage."""
     seen = set()
     fields = []
     for row in rows:
@@ -109,6 +121,7 @@ def fieldnames(rows: list[dict]) -> list[str]:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     rows = read_rows(args.input, args.limit)
     text_by_id = read_optional_index(args.text_filter)
@@ -131,9 +144,7 @@ def main() -> None:
         "rejected": [row for row in merged if row["asr_clean_verdict"] == "rejected"],
     }
     reason_counts = Counter(
-        reason
-        for row in merged
-        for reason in split_reasons(row.get("asr_clean_reasons"))
+        reason for row in merged for reason in split_reasons(row.get("asr_clean_reasons"))
     )
 
     fields = fieldnames(merged)

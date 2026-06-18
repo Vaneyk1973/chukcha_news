@@ -1,11 +1,19 @@
+"""Regression tests for the Chukchi News Voice pipeline."""
+
 from scripts.data.promote_asr_pseudolabels import convert_row, normalize_text
 
 
 def test_normalize_text_collapses_whitespace() -> None:
+    """
+    Exercise the `test_normalize_text_collapses_whitespace` behavior and guard against regressions.
+    """
     assert normalize_text("  аӈӄы\n  тэк ") == "аӈӄы тэк"
 
 
 def test_convert_row_uses_tts_schema_assumptions() -> None:
+    """
+    Exercise the `test_convert_row_uses_tts_schema_assumptions` behavior and guard against regressions.
+    """
     row = {
         "segment_id": "abc",
         "audio_path": "seg.wav",

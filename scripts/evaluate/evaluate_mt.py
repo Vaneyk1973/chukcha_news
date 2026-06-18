@@ -28,6 +28,7 @@ from chukcha_news.mt.quality import mt_generation_quality_args  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     parser.add_argument("--direction", choices=["ru_ckt", "ckt_ru"], required=True)
@@ -41,6 +42,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_jsonl(path: Path, limit: int | None) -> list[dict]:
+    """Read jsonl for this pipeline stage."""
     rows = []
     with path.open("r", encoding="utf-8") as input_file:
         for line in input_file:
@@ -52,6 +54,7 @@ def read_jsonl(path: Path, limit: int | None) -> list[dict]:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     direction = config["directions"][args.direction]

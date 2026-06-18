@@ -33,7 +33,7 @@ from chukcha_news.mt.modeling import (  # noqa: E402
     generation_kwargs,
     prefer_max_new_tokens,
 )
-from chukcha_news.mt.text_lm import CharNgramLM, generic_cyrillic_score, normalize_text  # noqa: E402
+from chukcha_news.mt.text_lm import CharNgramLM, generic_cyrillic_score  # noqa: E402
 
 
 TOKEN_RE = re.compile(r"[A-Za-zА-Яа-яЁёӃӄӇӈԒԓ']+")
@@ -78,6 +78,8 @@ RUSSIAN_STOPS = {
 
 @dataclass
 class EvalInput:
+    """Document the state and behavior for the `EvalInput` component."""
+
     sample_id: str
     chukchi_text: str
     source_ru: str = ""
@@ -85,6 +87,7 @@ class EvalInput:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/chukchi_eval.yaml")
     parser.add_argument("--input", type=Path, help="CSV/JSONL/TXT with generated Chukchi texts")
@@ -98,10 +101,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    """Clamp for this pipeline stage."""
     return min(max(value, low), high)
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
+    """Safe float for this pipeline stage."""
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -109,14 +114,17 @@ def safe_float(value: Any, default: float = 0.0) -> float:
 
 
 def tokens(text: str) -> list[str]:
+    """Tokens for this pipeline stage."""
     return [token.casefold() for token in TOKEN_RE.findall(text)]
 
 
 def russian_tokens(text: str) -> list[str]:
+    """Russian tokens for this pipeline stage."""
     return [token.casefold() for token in RU_TOKEN_RE.findall(text)]
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Read jsonl for this pipeline stage."""
     rows = []
     with path.open("r", encoding="utf-8") as input_file:
         for line in input_file:
@@ -127,6 +135,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def read_inputs(args: argparse.Namespace, config: dict) -> list[EvalInput]:
+    """Read inputs for this pipeline stage."""
     if args.text:
         return [EvalInput("inline", args.text.strip(), args.source_ru.strip(), "inline")]
 
@@ -140,7 +149,11 @@ def read_inputs(args: argparse.Namespace, config: dict) -> list[EvalInput]:
             with path.open("r", encoding="utf-8", newline="") as input_file:
                 raw_rows = list(csv.DictReader(input_file))
         else:
-            raw_rows = [{"id": str(index), "chukchi_text": line} for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1) if line.strip()]
+            raw_rows = [
+                {"id": str(index), "chukchi_text": line}
+                for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+                if line.strip()
+            ]
         rows = []
         for index, row in enumerate(raw_rows, 1):
             text = (
@@ -157,16 +170,16 @@ def read_inputs(args: argparse.Namespace, config: dict) -> list[EvalInput]:
                 EvalInput(
                     sample_id=str(row.get("id") or row.get("sample_id") or index),
                     chukchi_text=text,
-                    source_ru=(row.get("source_ru") or row.get("news_ru") or row.get("source_text") or "").strip(),
+                    source_ru=(
+                        row.get("source_ru") or row.get("news_ru") or row.get("source_text") or ""
+                    ).strip(),
                     source_path=str(path),
                 )
             )
         return rows
 
     server_dir = resolve_path(
-        args.server_dir
-        or config["input"].get("server_dir")
-        or "outputs/server"
+        args.server_dir or config["input"].get("server_dir") or "outputs/server"
     )
     rows = []
     for ckt_path in sorted(server_dir.glob("*/news_ckt.txt")):
@@ -189,6 +202,7 @@ def read_inputs(args: argparse.Namespace, config: dict) -> list[EvalInput]:
 
 
 def load_text_lm(config: dict, retrain: bool) -> CharNgramLM:
+    """Load text lm for this pipeline stage."""
     resources = config["resources"]
     model_path = resolve_path(resources["text_lm_model"])
     corpus_path = resolve_path(resources["trusted_corpus"])
@@ -201,11 +215,16 @@ def load_text_lm(config: dict, retrain: bool) -> CharNgramLM:
 
 
 def iter_corpus_texts(config: dict) -> list[str]:
+    """Iter corpus texts for this pipeline stage."""
     resources = config["resources"]
     texts: list[str] = []
     trusted = resolve_path(resources["trusted_corpus"])
     if trusted.exists():
-        texts.extend(line.strip() for line in trusted.read_text(encoding="utf-8").splitlines() if line.strip())
+        texts.extend(
+            line.strip()
+            for line in trusted.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
 
     mt_train = resolve_path(resources["mt_ru_ckt_train"])
     if mt_train.exists():
@@ -226,6 +245,8 @@ def iter_corpus_texts(config: dict) -> list[str]:
 
 @dataclass
 class CorpusStats:
+    """Document the state and behavior for the `CorpusStats` component."""
+
     lexicon: set[str]
     char4: set[str]
     suffixes: Counter[str]
@@ -233,6 +254,7 @@ class CorpusStats:
 
 
 def build_corpus_stats(texts: list[str]) -> CorpusStats:
+    """Build corpus stats for this pipeline stage."""
     lexicon: set[str] = set()
     char4: set[str] = set()
     suffixes: Counter[str] = Counter()
@@ -252,7 +274,10 @@ def build_corpus_stats(texts: list[str]) -> CorpusStats:
 
 
 class BackTranslator:
+    """Document the state and behavior for the `BackTranslator` component."""
+
     def __init__(self, config: dict) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         try:
             import torch
             from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
@@ -265,11 +290,15 @@ class BackTranslator:
         mt_config = load_yaml(bt_config["mt_config"])
         self.mt_config = mt_config
         self.direction = mt_config["directions"][bt_config.get("direction", "ckt_ru")]
-        model_path = resolve_path(bt_config.get("model_path") or Path(self.direction["output_dir"]) / "final")
+        model_path = resolve_path(
+            bt_config.get("model_path") or Path(self.direction["output_dir"]) / "final"
+        )
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
         prefer_max_new_tokens(self.model)
-        ensure_vocabulary_tokens(self.tokenizer, self.model, mt_config["tokenizer"]["additional_tokens"])
+        ensure_vocabulary_tokens(
+            self.tokenizer, self.model, mt_config["tokenizer"]["additional_tokens"]
+        )
         ensure_language_token(
             self.tokenizer,
             self.model,
@@ -278,12 +307,15 @@ class BackTranslator:
         )
         configure_tokenizer(self.tokenizer, self.direction)
         device_config = str(bt_config.get("device", "auto"))
-        self.device = "cuda" if device_config == "auto" and torch.cuda.is_available() else device_config
+        self.device = (
+            "cuda" if device_config == "auto" and torch.cuda.is_available() else device_config
+        )
         if self.device == "auto":
             self.device = "cpu"
         self.model.to(self.device).eval()
 
     def translate(self, text: str) -> str:
+        """Translate for this pipeline stage."""
         bt_config = self.config["backtranslation"]
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True).to(self.device)
         generation = {
@@ -297,6 +329,7 @@ class BackTranslator:
 
 
 def semantic_similarity(source_ru: str, backtranslation_ru: str) -> float | None:
+    """Semantic similarity for this pipeline stage."""
     if not source_ru.strip() or not backtranslation_ru.strip():
         return None
     import difflib
@@ -313,6 +346,7 @@ def semantic_similarity(source_ru: str, backtranslation_ru: str) -> float | None
 
 
 def chukchi_specific_ratio(text: str) -> float:
+    """Chukchi specific ratio for this pipeline stage."""
     letters = [char for char in text if char.isalpha()]
     if not letters:
         return 0.0
@@ -320,6 +354,7 @@ def chukchi_specific_ratio(text: str) -> float:
 
 
 def repetition_stats(text_tokens: list[str]) -> tuple[float, float]:
+    """Repetition stats for this pipeline stage."""
     if not text_tokens:
         return 1.0, 0.0
     counts = Counter(text_tokens)
@@ -329,6 +364,7 @@ def repetition_stats(text_tokens: list[str]) -> tuple[float, float]:
 
 
 def lexicon_score(text_tokens: list[str], stats: CorpusStats) -> tuple[float, float, list[str]]:
+    """Lexicon score for this pipeline stage."""
     if not text_tokens:
         return 0.0, 0.0, []
     known = [token for token in text_tokens if token in stats.lexicon]
@@ -346,6 +382,7 @@ def lexicon_score(text_tokens: list[str], stats: CorpusStats) -> tuple[float, fl
 
 
 def percentile(values: list[int], q: float) -> float:
+    """Percentile for this pipeline stage."""
     if not values:
         return 0.0
     ordered = sorted(values)
@@ -354,6 +391,7 @@ def percentile(values: list[int], q: float) -> float:
 
 
 def morph_score(text_tokens: list[str], stats: CorpusStats) -> tuple[float, dict[str, float]]:
+    """Morph score for this pipeline stage."""
     if not text_tokens:
         return 0.0, {"known_suffix_ratio": 0.0, "length_in_range_ratio": 0.0}
     suffix_hits = 0
@@ -375,7 +413,10 @@ def morph_score(text_tokens: list[str], stats: CorpusStats) -> tuple[float, dict
     }
 
 
-def hygiene_score(text: str, text_tokens: list[str], thresholds: dict) -> tuple[float, list[str], dict[str, float]]:
+def hygiene_score(
+    text: str, text_tokens: list[str], thresholds: dict
+) -> tuple[float, list[str], dict[str, float]]:
+    """Hygiene score for this pipeline stage."""
     chars = max(len(text), 1)
     latin_ratio = len(LATIN_RE.findall(text)) / chars
     han_ratio = len(HAN_RE.findall(text)) / chars
@@ -388,7 +429,10 @@ def hygiene_score(text: str, text_tokens: list[str], thresholds: dict) -> tuple[
         clamp(latin_ratio / max(float(thresholds["max_latin_ratio"]), 1e-6)),
         1.0 if han_ratio > float(thresholds["max_han_ratio"]) else 0.0,
         clamp(ru_stop_ratio / max(float(thresholds["max_russian_stopword_ratio"]), 1e-6)),
-        clamp((repeated_share - 0.12) / max(float(thresholds["max_repeated_token_share"]) - 0.12, 1e-6)),
+        clamp(
+            (repeated_share - 0.12)
+            / max(float(thresholds["max_repeated_token_share"]) - 0.12, 1e-6)
+        ),
         run_penalty,
     ]
     score = clamp(1.0 - sum(penalties) / len(penalties))
@@ -403,16 +447,21 @@ def hygiene_score(text: str, text_tokens: list[str], thresholds: dict) -> tuple[
         flags.append("repetition")
     if run_penalty:
         flags.append("char_run")
-    return score, flags, {
-        "latin_ratio": latin_ratio,
-        "han_ratio": han_ratio,
-        "russian_stopword_ratio": ru_stop_ratio,
-        "max_repeated_token_share": repeated_share,
-        "distinct_token_ratio": distinct_ratio,
-    }
+    return (
+        score,
+        flags,
+        {
+            "latin_ratio": latin_ratio,
+            "han_ratio": han_ratio,
+            "russian_stopword_ratio": ru_stop_ratio,
+            "max_repeated_token_share": repeated_share,
+            "distinct_token_ratio": distinct_ratio,
+        },
+    )
 
 
 def weighted_score(parts: dict[str, float | None]) -> float:
+    """Weighted score for this pipeline stage."""
     weights = {
         "semantic": 0.35,
         "form": 0.25,
@@ -427,9 +476,14 @@ def weighted_score(parts: dict[str, float | None]) -> float:
     return sum(float(active[key]) * weights[key] for key in active) / total_weight
 
 
-def verdict(overall: float, parts: dict[str, float | None], flags: list[str], thresholds: dict) -> str:
+def verdict(
+    overall: float, parts: dict[str, float | None], flags: list[str], thresholds: dict
+) -> str:
+    """Verdict for this pipeline stage."""
     critical = set(flags) & {"han_leak", "repetition", "char_run"}
-    if parts.get("semantic") is not None and float(parts["semantic"] or 0) < float(thresholds["min_semantic_score"]):
+    if parts.get("semantic") is not None and float(parts["semantic"] or 0) < float(
+        thresholds["min_semantic_score"]
+    ):
         critical.add("semantic_drift")
     if float(parts.get("hygiene") or 0) < float(thresholds["min_hygiene_score"]):
         critical.add("dirty_output")
@@ -443,8 +497,11 @@ def verdict(overall: float, parts: dict[str, float | None], flags: list[str], th
 
 
 def failure_layers(parts: dict[str, float | None], flags: list[str], thresholds: dict) -> list[str]:
+    """Failure layers for this pipeline stage."""
     layers = []
-    if parts.get("semantic") is not None and float(parts["semantic"] or 0) < float(thresholds["min_semantic_score"]):
+    if parts.get("semantic") is not None and float(parts["semantic"] or 0) < float(
+        thresholds["min_semantic_score"]
+    ):
         layers.append("semantic")
     if float(parts.get("form") or 0) < 0.45:
         layers.append("chukchi_form")
@@ -464,6 +521,7 @@ def score_one(
     thresholds: dict,
     translator: BackTranslator | None,
 ) -> dict:
+    """Score one for this pipeline stage."""
     text = normalize_chukchi_detokenization(row.chukchi_text.strip())
     text_tokens = tokens(text)
     chukchi_lm_score = lm.average_log_probability(text)
@@ -471,7 +529,11 @@ def score_one(
     lm_margin = chukchi_lm_score - generic_score
     form_score = clamp(
         (lm_margin - float(thresholds["chukchi_lm_reject_margin"]))
-        / max(float(thresholds["chukchi_lm_keep_margin"]) - float(thresholds["chukchi_lm_reject_margin"]), 1e-6)
+        / max(
+            float(thresholds["chukchi_lm_keep_margin"])
+            - float(thresholds["chukchi_lm_reject_margin"]),
+            1e-6,
+        )
     )
     token_coverage, char_coverage, unknown_tokens = lexicon_score(text_tokens, stats)
     lex_score = clamp(0.45 * token_coverage + 0.55 * char_coverage)
@@ -520,6 +582,7 @@ def score_one(
 
 
 def summarize(rows: list[dict]) -> dict:
+    """Summarize for this pipeline stage."""
     if not rows:
         return {}
     score_keys = [
@@ -529,12 +592,16 @@ def summarize(rows: list[dict]) -> dict:
         "morphology_score",
         "hygiene_score",
     ]
-    semantic_values = [safe_float(row["semantic_score"], -1.0) for row in rows if row["semantic_score"] != ""]
+    semantic_values = [
+        safe_float(row["semantic_score"], -1.0) for row in rows if row["semantic_score"] != ""
+    ]
     summary = {
         "samples": len(rows),
         "verdict_counts": dict(Counter(row["verdict"] for row in rows)),
         "failure_layer_counts": dict(
-            Counter(layer for row in rows for layer in str(row["failure_layers"]).split(",") if layer)
+            Counter(
+                layer for row in rows for layer in str(row["failure_layers"]).split(",") if layer
+            )
         ),
     }
     for key in score_keys:
@@ -548,6 +615,7 @@ def summarize(rows: list[dict]) -> dict:
 
 
 def write_csv(path: Path, rows: list[dict]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = list(rows[0].keys()) if rows else []
     with path.open("w", encoding="utf-8", newline="") as output_file:
@@ -557,6 +625,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     rows = read_inputs(args, config)
@@ -575,7 +644,10 @@ def main() -> None:
     scored = []
     for index, row in enumerate(rows, 1):
         scored.append(score_one(row, lm, stats, config["thresholds"], translator))
-        print(f"[eval-chukchi] {index}/{len(rows)} {row.sample_id}: {scored[-1]['verdict']}", flush=True)
+        print(
+            f"[eval-chukchi] {index}/{len(rows)} {row.sample_id}: {scored[-1]['verdict']}",
+            flush=True,
+        )
 
     samples_csv = resolve_path(config["output"]["samples_csv"])
     write_csv(samples_csv, scored)

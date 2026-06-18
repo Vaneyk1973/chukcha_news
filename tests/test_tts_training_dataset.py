@@ -1,3 +1,5 @@
+"""Regression tests for the Chukchi News Voice pipeline."""
+
 from pathlib import Path
 
 from scripts.data.prepare_tts_training_dataset import convert_row, split_rows
@@ -5,6 +7,9 @@ from scripts.evaluate.evaluate_tts import summarize
 
 
 def test_convert_row_uses_absolute_audio_path() -> None:
+    """
+    Exercise the `test_convert_row_uses_absolute_audio_path` behavior and guard against regressions.
+    """
     row = {
         "segment_id": "abc",
         "audio_path": "data/interim/example.wav",
@@ -21,6 +26,9 @@ def test_convert_row_uses_absolute_audio_path() -> None:
 
 
 def test_split_rows_is_deterministic_and_keeps_eval() -> None:
+    """
+    Exercise the `test_split_rows_is_deterministic_and_keeps_eval` behavior and guard against regressions.
+    """
     rows = [{"segment_id": str(index)} for index in range(10)]
 
     train_a, eval_a = split_rows(rows, train_ratio=0.8, seed=7)
@@ -33,6 +41,7 @@ def test_split_rows_is_deterministic_and_keeps_eval() -> None:
 
 
 def test_summarize_rounds_cer() -> None:
+    """Exercise the `test_summarize_rounds_cer` behavior and guard against regressions."""
     rows = [
         {"cer": "0.1", "synthetic_duration_sec": "1.0"},
         {"cer": "0.3", "synthetic_duration_sec": "3.0"},

@@ -1,3 +1,5 @@
+"""Reusable machine-translation helper module for Chukchi News Voice."""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +10,7 @@ _SPACE_AFTER_ADDED_CHUKCHI_LETTER = re.compile(rf"(?<=[{CHUKCHI_LETTERS}]) (?=[Ð
 
 
 def normalize_chukchi_detokenization(text: str) -> str:
+    """Normalize chukchi detokenization for this pipeline stage."""
     previous = text
     while True:
         current = _SPACE_AFTER_ADDED_CHUKCHI_LETTER.sub("", previous)
@@ -17,6 +20,7 @@ def normalize_chukchi_detokenization(text: str) -> str:
 
 
 def character_error_rate(reference: str, hypothesis: str) -> float:
+    """Character error rate for this pipeline stage."""
     reference = reference.strip()
     hypothesis = hypothesis.strip()
     if not reference:
@@ -38,6 +42,7 @@ def character_error_rate(reference: str, hypothesis: str) -> float:
 
 
 def mean_character_error_rate(references: list[str], hypotheses: list[str]) -> float:
+    """Mean character error rate for this pipeline stage."""
     if len(references) != len(hypotheses):
         raise ValueError("References and hypotheses must have equal length")
     if not references:

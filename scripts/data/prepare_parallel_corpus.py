@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Data preparation utility for one stage of the Chukchi News Voice pipeline."""
+
 from __future__ import annotations
 
 import csv
@@ -11,6 +13,7 @@ TARGET_PATH = ROOT / "data" / "interim" / "parallel_corpus.csv"
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     if not SOURCE_PATH.exists():
         raise FileNotFoundError(f"Missing source corpus: {SOURCE_PATH}")
 

@@ -1,3 +1,5 @@
+"""Reusable package module for Chukchi News Voice."""
+
 from pathlib import Path
 
 

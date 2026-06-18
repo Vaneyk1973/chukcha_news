@@ -25,18 +25,21 @@ HAN_RE = re.compile(r"[\u4e00-\u9fff]")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/llm_chukchi.yaml")
     return parser.parse_args()
 
 
 def normalize(text: str) -> str:
+    """Normalize for this pipeline stage."""
     text = text.replace("\ufeff", "")
     text = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
 def chukchi_ratio(text: str) -> float:
+    """Chukchi ratio for this pipeline stage."""
     cyrillic = CYRILLIC_RE.findall(text)
     if not cyrillic:
         return 0.0
@@ -44,6 +47,7 @@ def chukchi_ratio(text: str) -> float:
 
 
 def usable_chukchi(text: str, min_chars: int = 20, max_chars: int = 900) -> bool:
+    """Usable chukchi for this pipeline stage."""
     text = normalize(text)
     if not min_chars <= len(text) <= max_chars:
         return False
@@ -55,6 +59,7 @@ def usable_chukchi(text: str, min_chars: int = 20, max_chars: int = 900) -> bool
 
 
 def chat_example(system: str, user: str, assistant: str, source: str) -> dict:
+    """Chat example for this pipeline stage."""
     return {
         "messages": [
             {"role": "system", "content": system},
@@ -66,6 +71,7 @@ def chat_example(system: str, user: str, assistant: str, source: str) -> dict:
 
 
 def load_monolingual(path: Path, limit: int, rng: random.Random) -> list[dict]:
+    """Load monolingual for this pipeline stage."""
     lines = [normalize(line) for line in path.read_text(encoding="utf-8").splitlines()]
     lines = [line for line in lines if usable_chukchi(line, min_chars=40, max_chars=900)]
     rng.shuffle(lines)
@@ -82,6 +88,7 @@ def load_monolingual(path: Path, limit: int, rng: random.Random) -> list[dict]:
 
 
 def load_parallel(path: Path, limit: int, rng: random.Random) -> list[dict]:
+    """Load parallel for this pipeline stage."""
     rows = []
     with path.open("r", encoding="utf-8") as input_file:
         for line in input_file:
@@ -109,6 +116,7 @@ def load_parallel(path: Path, limit: int, rng: random.Random) -> list[dict]:
 
 
 def load_asr(path: Path, limit: int, rng: random.Random) -> list[dict]:
+    """Load asr for this pipeline stage."""
     if not path.exists():
         return []
     rows = []
@@ -135,6 +143,7 @@ def load_asr(path: Path, limit: int, rng: random.Random) -> list[dict]:
 def split_examples(
     examples: list[dict], validation_size: int, rng: random.Random
 ) -> tuple[list[dict], list[dict]]:
+    """Split examples for this pipeline stage."""
     shuffled = list(examples)
     rng.shuffle(shuffled)
     validation_size = min(validation_size, max(1, len(shuffled) // 20))
@@ -142,6 +151,7 @@ def split_examples(
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Write jsonl for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as output_file:
         for row in rows:
@@ -149,6 +159,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     data = config["data"]

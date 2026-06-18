@@ -15,6 +15,7 @@ from chukcha_news.config import load_yaml  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     parser.add_argument("--skip-baselines", action="store_true")
@@ -22,6 +23,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def model_ids(config: dict, include_baselines: bool = True) -> list[str]:
+    """Model ids for this pipeline stage."""
     models = {direction["base_model"] for direction in config["directions"].values()}
     if include_baselines:
         models.update(direction["baseline_model"] for direction in config["directions"].values())
@@ -29,6 +31,7 @@ def model_ids(config: dict, include_baselines: bool = True) -> list[str]:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     try:

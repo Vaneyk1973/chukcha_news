@@ -59,6 +59,7 @@ OUTPUT_FIELDS = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -75,17 +76,20 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_rows(path: Path, limit: int | None = None) -> list[dict]:
+    """Read rows for this pipeline stage."""
     with path.open("r", encoding="utf-8", newline="") as input_file:
         rows = list(csv.DictReader(input_file))
     return rows[:limit] if limit else rows
 
 
 def require_ffmpeg() -> None:
+    """Require ffmpeg for this pipeline stage."""
     if shutil.which("ffmpeg") is None:
         raise RuntimeError("ffmpeg is required")
 
 
 def read_audio(path: Path, sample_rate: int = SAMPLE_RATE):
+    """Read audio for this pipeline stage."""
     result = subprocess.run(
         [
             "ffmpeg",
@@ -121,10 +125,12 @@ def read_audio(path: Path, sample_rate: int = SAMPLE_RATE):
 
 
 def normalize_label(label: str) -> str:
+    """Normalize label for this pipeline stage."""
     return label.strip().casefold()
 
 
 def bucket_scores(predictions: list[dict]) -> dict[str, float]:
+    """Bucket scores for this pipeline stage."""
     scores = {"speech": 0.0, "music": 0.0, "noise": 0.0}
     for prediction in predictions:
         label = normalize_label(prediction["label"])
@@ -144,6 +150,7 @@ def decide_class(
     music_threshold: float,
     margin_threshold: float,
 ) -> tuple[str, float, float]:
+    """Decide class for this pipeline stage."""
     scores = bucket_scores(predictions)
     speech_score = scores["speech"]
     music_score = max(scores["music"], scores["noise"])
@@ -157,6 +164,7 @@ def decide_class(
 
 
 def load_model(model_name: str, device: str):
+    """Load model for this pipeline stage."""
     try:
         import torch
         from transformers import AutoFeatureExtractor, AutoModelForAudioClassification, pipeline
@@ -177,6 +185,7 @@ def load_model(model_name: str, device: str):
 
 
 def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fields, extrasaction="ignore")
@@ -185,6 +194,7 @@ def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
 
 
 def classify_rows(args: argparse.Namespace) -> tuple[list[dict], Counter]:
+    """Classify rows for this pipeline stage."""
     classifier = load_model(args.model, args.device)
     rows = read_rows(args.input, args.limit)
     classified = []
@@ -235,10 +245,13 @@ def classify_rows(args: argparse.Namespace) -> tuple[list[dict], Counter]:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     require_ffmpeg()
     classified, failures = classify_rows(args)
-    fields = list(csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or [])
+    fields = list(
+        csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or []
+    )
     fields.extend(field for field in OUTPUT_FIELDS if field not in fields)
 
     by_class: dict[str, list[dict]] = {"speech": [], "music": [], "uncertain": []}

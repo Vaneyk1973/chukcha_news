@@ -24,6 +24,7 @@ from scripts.data.select_tts_pseudolabels import character_error_rate  # noqa: E
 
 
 def configure_transformers_output() -> None:
+    """Configure transformers output for this pipeline stage."""
     try:
         from transformers.utils import logging
     except ImportError:
@@ -33,6 +34,7 @@ def configure_transformers_output() -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/tts.yaml")
     parser.add_argument("--limit", type=int)
@@ -42,22 +44,28 @@ def parse_args() -> argparse.Namespace:
         choices=["auto", "cpu", "cuda"],
         help="Legacy shortcut. Used for both TTS and ASR unless the specific device args are set.",
     )
-    parser.add_argument("--tts-device", choices=["auto", "cpu", "cuda"], help="Device for synthesis.")
+    parser.add_argument(
+        "--tts-device", choices=["auto", "cpu", "cuda"], help="Device for synthesis."
+    )
     parser.add_argument(
         "--asr-device",
         choices=["auto", "cpu", "cuda"],
         help="Device for ASR round-trip scoring. Defaults to CPU to avoid CUDA OOM after synthesis.",
     )
-    parser.add_argument("--asr-batch-size", type=int, help="Number of synthetic files per ASR batch.")
+    parser.add_argument(
+        "--asr-batch-size", type=int, help="Number of synthetic files per ASR batch."
+    )
     return parser.parse_args()
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Read jsonl for this pipeline stage."""
     with path.open("r", encoding="utf-8") as input_file:
         return [json.loads(line) for line in input_file if line.strip()]
 
 
 def write_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
+    """Write wav for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     audio = np.asarray(audio, dtype=np.float32)
     if audio.ndim > 1:
@@ -76,7 +84,10 @@ def write_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
 
 
 class TTSSynthesizer:
+    """Document the state and behavior for the `TTSSynthesizer` component."""
+
     def __init__(self, model_path: str | Path, device: str) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         import torch
         from transformers import VitsModel, VitsTokenizer
 
@@ -89,12 +100,14 @@ class TTSSynthesizer:
         self.sample_rate = int(self.model.config.sampling_rate)
 
     def synthesize(self, text: str) -> np.ndarray:
+        """Synthesize for this pipeline stage."""
         inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
         with self.torch.inference_mode():
             output = self.model(**inputs)
         return output.waveform[0].detach().cpu().numpy()
 
     def close(self) -> None:
+        """Close for this pipeline stage."""
         del self.model
         del self.tokenizer
         if self.device == "cuda":
@@ -102,6 +115,7 @@ class TTSSynthesizer:
 
 
 def clear_cuda_cache() -> None:
+    """Clear cuda cache for this pipeline stage."""
     try:
         import torch
     except ImportError:
@@ -112,6 +126,7 @@ def clear_cuda_cache() -> None:
 
 
 def model_specs(config: dict, requested: str) -> list[tuple[str, str | Path]]:
+    """Model specs for this pipeline stage."""
     specs: list[tuple[str, str | Path]] = []
     if requested in {"baseline", "both"}:
         specs.append(("baseline", config["model"]["base_model"]))
@@ -122,6 +137,7 @@ def model_specs(config: dict, requested: str) -> list[tuple[str, str | Path]]:
 
 
 def summarize(rows: list[dict]) -> dict:
+    """Summarize for this pipeline stage."""
     if not rows:
         return {"samples": 0, "mean_cer": None}
     cers = [float(row["cer"]) for row in rows]
@@ -142,6 +158,7 @@ def transcribe_in_batches(
     device: str,
     batch_size: int,
 ) -> list[tuple[str, float]]:
+    """Transcribe in batches for this pipeline stage."""
     transcriber = MMSTranscriber(
         config["pseudo_labeling"]["transcriber"],
         config["model"]["language_code"],
@@ -161,6 +178,7 @@ def transcribe_in_batches(
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     configure_transformers_output()
     args = parse_args()
     config = load_yaml(args.config)

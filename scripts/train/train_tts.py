@@ -19,12 +19,14 @@ EXTERNAL = ROOT / "external" / "finetune-hf-vits"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/tts.yaml")
     return parser.parse_args()
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     if not config["training"]["enabled"]:

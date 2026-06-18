@@ -17,6 +17,7 @@ from chukcha_news.config import load_yaml, resolve_path  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/tts.yaml")
     parser.add_argument("--limit", type=int)
@@ -24,11 +25,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Read jsonl for this pipeline stage."""
     with path.open("r", encoding="utf-8") as input_file:
         return [json.loads(line) for line in input_file if line.strip()]
 
 
 def convert_row(row: dict) -> dict:
+    """Convert row for this pipeline stage."""
     return {
         "segment_id": str(row["segment_id"]),
         "audio": str(resolve_path(row["audio_path"])),
@@ -39,6 +42,7 @@ def convert_row(row: dict) -> dict:
 
 
 def split_rows(rows: list[dict], train_ratio: float, seed: int) -> tuple[list[dict], list[dict]]:
+    """Split rows for this pipeline stage."""
     shuffled = list(rows)
     random.Random(seed).shuffle(shuffled)
     split_at = max(1, int(len(shuffled) * train_ratio))
@@ -48,6 +52,7 @@ def split_rows(rows: list[dict], train_ratio: float, seed: int) -> tuple[list[di
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Write jsonl for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as output_file:
         for row in rows:
@@ -55,6 +60,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     data_config = config["data"]

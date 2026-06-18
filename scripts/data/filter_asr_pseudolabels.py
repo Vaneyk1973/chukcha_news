@@ -102,6 +102,7 @@ RUSSIAN_FUZZY_PATTERNS = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--audio-classes", type=Path, default=DEFAULT_AUDIO_CLASSES)
@@ -116,14 +117,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     return re.sub(r"\s+", " ", text.casefold()).strip()
 
 
 def tokens(text: str) -> list[str]:
+    """Tokens for this pipeline stage."""
     return TOKEN_RE.findall(normalize_text(text))
 
 
 def chukchi_specific_ratio(text: str) -> float:
+    """Chukchi specific ratio for this pipeline stage."""
     letters = [char for char in text if char.isalpha()]
     if not letters:
         return 0.0
@@ -131,17 +135,21 @@ def chukchi_specific_ratio(text: str) -> float:
 
 
 def russian_score(text: str) -> float:
+    """Russian score for this pipeline stage."""
     words = tokens(text)
     if not words:
         return 0.0
     stopword_hits = sum(word in RUSSIAN_STOPWORDS for word in words)
     radio_hits = sum(word in RUSSIAN_RADIO_WORDS for word in words)
     latin_hits = sum(any("a" <= char <= "z" for char in word) for word in words)
-    fuzzy_hits = sum(1 for pattern in RUSSIAN_FUZZY_PATTERNS if pattern.search(normalize_text(text)))
+    fuzzy_hits = sum(
+        1 for pattern in RUSSIAN_FUZZY_PATTERNS if pattern.search(normalize_text(text))
+    )
     return stopword_hits * 0.5 + radio_hits * 1.5 + latin_hits + fuzzy_hits
 
 
 def load_audio_classes(path: Path) -> dict[str, dict]:
+    """Load audio classes for this pipeline stage."""
     if not path.exists():
         return {}
     with path.open("r", encoding="utf-8", newline="") as input_file:
@@ -149,6 +157,7 @@ def load_audio_classes(path: Path) -> dict[str, dict]:
 
 
 def top_label_score(row: dict, wanted: set[str]) -> float:
+    """Top label score for this pipeline stage."""
     if not row or not row.get("audio_top_labels"):
         return 0.0
     try:
@@ -171,6 +180,7 @@ def rejection_reasons(
     hard_russian_score_threshold: float,
     foreign_song_score_threshold: float,
 ) -> list[str]:
+    """Rejection reasons for this pipeline stage."""
     text = row.get("transcript", "")
     reasons = []
     chukchi_ratio = chukchi_specific_ratio(text)
@@ -189,12 +199,14 @@ def rejection_reasons(
 
 
 def read_rows(path: Path, limit: int | None) -> list[dict]:
+    """Read rows for this pipeline stage."""
     with path.open("r", encoding="utf-8", newline="") as input_file:
         rows = list(csv.DictReader(input_file))
     return rows[:limit] if limit else rows
 
 
 def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output_file:
         writer = csv.DictWriter(output_file, fieldnames=fieldnames, extrasaction="ignore")
@@ -203,6 +215,7 @@ def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     rows = read_rows(args.input, args.limit)
     audio_classes = load_audio_classes(args.audio_classes)
@@ -236,7 +249,9 @@ def main() -> None:
         else:
             kept.append(enriched)
 
-    base_fields = list(csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or [])
+    base_fields = list(
+        csv.DictReader(args.input.open("r", encoding="utf-8", newline="")).fieldnames or []
+    )
     extra_fields = [
         "text_filter_reasons",
         "russian_score",

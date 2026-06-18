@@ -1,3 +1,5 @@
+"""Regression tests for the Chukchi News Voice pipeline."""
+
 import importlib.util
 from pathlib import Path
 
@@ -10,6 +12,9 @@ SPEC.loader.exec_module(downloader)
 
 
 def test_model_ids_are_unique_and_include_baselines() -> None:
+    """
+    Exercise the `test_model_ids_are_unique_and_include_baselines` behavior and guard against regressions.
+    """
     config = {
         "directions": {
             "a": {"base_model": "base", "baseline_model": "baseline-a"},

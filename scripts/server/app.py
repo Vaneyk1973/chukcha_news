@@ -63,6 +63,7 @@ _TRANSLATION_MEMORY: list[dict] | None = None
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/server.yaml")
     parser.add_argument("--host")
@@ -72,6 +73,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def clear_cuda() -> None:
+    """Clear cuda for this pipeline stage."""
     gc.collect()
     with contextlib.suppress(ImportError):
         import torch
@@ -81,6 +83,7 @@ def clear_cuda() -> None:
 
 
 def write_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
+    """Write wav for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     audio = np.asarray(audio, dtype=np.float32).squeeze()
     audio = np.nan_to_num(audio)
@@ -96,6 +99,7 @@ def write_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
 
 
 def model_options_payload(config: dict) -> dict:
+    """Model options payload for this pipeline stage."""
     groups = {}
     for group, group_config in config.get("model_options", {}).items():
         groups[group] = {
@@ -113,11 +117,13 @@ def model_options_payload(config: dict) -> dict:
 
 
 def apply_model_selection(config: dict, selection: dict | None) -> dict:
+    """Apply model selection for this pipeline stage."""
     selected = copy.deepcopy(config)
     selection = selection or {}
     options = selected.get("model_options", {})
 
     def choice(group: str) -> tuple[str, dict]:
+        """Choice for this pipeline stage."""
         group_config = options.get(group, {})
         choices = group_config.get("choices", {})
         key = str(selection.get(group) or group_config.get("default") or "")
@@ -128,21 +134,13 @@ def apply_model_selection(config: dict, selection: dict | None) -> dict:
     if "llm_news" in options:
         _, news = choice("llm_news")
         selected["llm"].update(
-            {
-                key: value
-                for key, value in news.items()
-                if key not in {"label", "description"}
-            }
+            {key: value for key, value in news.items() if key not in {"label", "description"}}
         )
 
     if "direct_chukchi" in options:
         _, direct = choice("direct_chukchi")
         selected["llm"].update(
-            {
-                key: value
-                for key, value in direct.items()
-                if key not in {"label", "description"}
-            }
+            {key: value for key, value in direct.items() if key not in {"label", "description"}}
         )
 
     if "mt_ru_ckt" in options:
@@ -166,31 +164,34 @@ def apply_model_selection(config: dict, selection: dict | None) -> dict:
     if "tts" in options:
         _, tts = choice("tts")
         selected["tts"].update(
-            {
-                key: value
-                for key, value in tts.items()
-                if key not in {"label", "description"}
-            }
+            {key: value for key, value in tts.items() if key not in {"label", "description"}}
         )
     return selected
 
 
 def public_output_url(path: Path) -> str:
+    """Public output url for this pipeline stage."""
     return "/" + str(path.relative_to(ROOT)).replace(os.sep, "/")
 
 
 class HFNewsRuntime:
+    """Document the state and behavior for the `HFNewsRuntime` component."""
+
     def __init__(self, config: dict) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         self.config = config
         self.base_model = str(config["hf_news_base_model"])
         self.max_new_tokens = int(config.get("hf_news_max_new_tokens", 180))
 
     def __enter__(self) -> "HFNewsRuntime":
+        """Acquire runtime resources required by this context manager."""
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         except ImportError as error:
-            raise RuntimeError("Install LLM dependencies with: python3 -m pip install -e '.[llm]'") from error
+            raise RuntimeError(
+                "Install LLM dependencies with: python3 -m pip install -e '.[llm]'"
+            ) from error
 
         self.torch = torch
         self.tokenizer = AutoTokenizer.from_pretrained(self.base_model, use_fast=True)
@@ -213,12 +214,14 @@ class HFNewsRuntime:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Release runtime resources owned by this context manager."""
         for name in ("model", "tokenizer"):
             if hasattr(self, name):
                 delattr(self, name)
         clear_cuda()
 
     def generate_news_stream(self, user_prompt: str, news_style: str) -> Iterator[str]:
+        """Generate news stream for this pipeline stage."""
         system_prompt = (
             "Ты редактор местной радиостанции. По пользовательскому промпту напиши готовый "
             "текст новости строго на русском языке. Не переводи промпт дословно: осмысли "
@@ -254,13 +257,17 @@ class HFNewsRuntime:
 
 
 class HFLoraRuntime:
+    """Document the state and behavior for the `HFLoraRuntime` component."""
+
     def __init__(self, config: dict) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         self.config = config
         self.base_model = str(config["hf_base_model"])
         self.adapter = resolve_path(config["hf_lora_adapter"])
         self.max_new_tokens = int(config.get("hf_max_new_tokens", 140))
 
     def __enter__(self) -> "HFLoraRuntime":
+        """Acquire runtime resources required by this context manager."""
         if not self.adapter.exists():
             raise RuntimeError(
                 f"LoRA adapter is missing: {self.adapter}. Run `make train-llm-chukchi` first."
@@ -270,7 +277,9 @@ class HFLoraRuntime:
             from peft import PeftModel
             from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         except ImportError as error:
-            raise RuntimeError("Install LLM dependencies with: python3 -m pip install -e '.[llm]'") from error
+            raise RuntimeError(
+                "Install LLM dependencies with: python3 -m pip install -e '.[llm]'"
+            ) from error
 
         self.torch = torch
         self.tokenizer = AutoTokenizer.from_pretrained(self.base_model, use_fast=True)
@@ -294,12 +303,14 @@ class HFLoraRuntime:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Release runtime resources owned by this context manager."""
         for name in ("model", "tokenizer"):
             if hasattr(self, name):
                 delattr(self, name)
         clear_cuda()
 
     def generate_chukchi_stream(self, user_prompt: str, direct_style: str) -> Iterator[str]:
+        """Generate chukchi stream for this pipeline stage."""
         messages = [
             {
                 "role": "system",
@@ -339,6 +350,7 @@ class HFLoraRuntime:
 
 
 def mock_news(prompt: str) -> str:
+    """Mock news for this pipeline stage."""
     topic = prompt.strip().rstrip(".") or "важном событии в регионе"
     return (
         f"Сегодня стало известно о {topic}. Представители местных служб сообщили, "
@@ -348,6 +360,7 @@ def mock_news(prompt: str) -> str:
 
 
 def mock_news_stream(prompt: str) -> Iterator[str]:
+    """Mock news stream for this pipeline stage."""
     words = mock_news(prompt).split(" ")
     for index, word in enumerate(words):
         yield word if index == 0 else f" {word}"
@@ -355,6 +368,7 @@ def mock_news_stream(prompt: str) -> Iterator[str]:
 
 
 def mock_chukchi_text(prompt: str) -> str:
+    """Mock chukchi text for this pipeline stage."""
     return (
         "Игыр Чукоткак нымытваԓьыт нэнаԓгыӄинэт. "
         "Оравэтԓьат ынӄэн нымытваԓьыт эпы нэнъэӈэӈэтынэт. "
@@ -363,6 +377,7 @@ def mock_chukchi_text(prompt: str) -> str:
 
 
 def mock_chukchi_stream(prompt: str) -> Iterator[str]:
+    """Mock chukchi stream for this pipeline stage."""
     words = mock_chukchi_text(prompt).split(" ")
     for index, word in enumerate(words):
         yield word if index == 0 else f" {word}"
@@ -370,6 +385,7 @@ def mock_chukchi_stream(prompt: str) -> Iterator[str]:
 
 
 def generate_news_stream(prompt: str, config: dict, mock_llm: bool) -> Iterator[str]:
+    """Generate news stream for this pipeline stage."""
     if mock_llm:
         yield from mock_news_stream(prompt)
         return
@@ -381,6 +397,7 @@ def generate_news_stream(prompt: str, config: dict, mock_llm: bool) -> Iterator[
 
 
 def generate_chukchi_stream(prompt: str, config: dict, mock_llm: bool) -> Iterator[str]:
+    """Generate chukchi stream for this pipeline stage."""
     if mock_llm:
         yield from mock_chukchi_stream(prompt)
         return
@@ -396,6 +413,7 @@ def generate_chukchi_stream(prompt: str, config: dict, mock_llm: bool) -> Iterat
 
 
 def clean_news_text(text: str) -> str:
+    """Clean news text for this pipeline stage."""
     text = re.sub(r"```.*?```", "", text, flags=re.S)
     text = re.sub(r"^\s*(текст новости|новость|заголовок)\s*:\s*", "", text, flags=re.I)
     lines = []
@@ -407,21 +425,29 @@ def clean_news_text(text: str) -> str:
 
 
 def validate_russian_news(text: str) -> None:
+    """Validate russian news for this pipeline stage."""
     lowered = text.lower()
     cyrillic = len(CYRILLIC_RE.findall(text))
     han = len(HAN_RE.findall(text))
     latin = len(LATIN_RE.findall(text))
     if len(text) < 60:
-        raise RuntimeError("LLM generated a news text that is too short. Try a more concrete prompt.")
+        raise RuntimeError(
+            "LLM generated a news text that is too short. Try a more concrete prompt."
+        )
     if han:
-        raise RuntimeError("LLM generated non-Russian text. Try again or switch to another local LLM.")
+        raise RuntimeError(
+            "LLM generated non-Russian text. Try again or switch to another local LLM."
+        )
     if any(phrase in lowered for phrase in BAD_LLM_PHRASES):
-        raise RuntimeError("LLM refused instead of writing a news item. Rephrase the prompt and try again.")
+        raise RuntimeError(
+            "LLM refused instead of writing a news item. Rephrase the prompt and try again."
+        )
     if cyrillic < 40 or latin > max(20, cyrillic * 0.15):
         raise RuntimeError("LLM output is not clean Russian news text. Try again.")
 
 
 def validate_chukchi_text(text: str, source: str = "MT") -> None:
+    """Validate chukchi text for this pipeline stage."""
     cleaned = re.sub(r"\s+", "", text)
     if len(cleaned) < 20:
         raise RuntimeError(f"{source} generated an empty or too-short Chukchi text.")
@@ -435,10 +461,12 @@ def validate_chukchi_text(text: str, source: str = "MT") -> None:
 
 
 def normalize_ru_for_match(text: str) -> str:
+    """Normalize ru for match for this pipeline stage."""
     return " ".join(WORD_RE.findall(text.casefold()))
 
 
 def char_ngrams(text: str, size: int = 3) -> set[str]:
+    """Char ngrams for this pipeline stage."""
     text = normalize_ru_for_match(text)
     if len(text) <= size:
         return {text} if text else set()
@@ -446,12 +474,14 @@ def char_ngrams(text: str, size: int = 3) -> set[str]:
 
 
 def jaccard(left: set[str], right: set[str]) -> float:
+    """Jaccard for this pipeline stage."""
     if not left or not right:
         return 0.0
     return len(left & right) / len(left | right)
 
 
 def sentence_similarity(left: str, right: str) -> float:
+    """Sentence similarity for this pipeline stage."""
     left_words = set(normalize_ru_for_match(left).split())
     right_words = set(normalize_ru_for_match(right).split())
     word_score = jaccard(left_words, right_words)
@@ -460,6 +490,7 @@ def sentence_similarity(left: str, right: str) -> float:
 
 
 def load_translation_memory(config: dict) -> list[dict]:
+    """Load translation memory for this pipeline stage."""
     global _TRANSLATION_MEMORY
     cache_key = tuple(config["mt"].get("translation_memory", {}).get("files", []))
     if (
@@ -508,6 +539,7 @@ def load_translation_memory(config: dict) -> list[dict]:
 
 
 def translation_memory_lookup(sentence: str, config: dict) -> dict | None:
+    """Translation memory lookup for this pipeline stage."""
     memory_config = config["mt"].get("translation_memory", {})
     if not bool(memory_config.get("enabled", False)):
         return None
@@ -517,7 +549,9 @@ def translation_memory_lookup(sentence: str, config: dict) -> dict | None:
     best = None
     best_score = 0.0
     for row in load_translation_memory(config):
-        score = 0.55 * jaccard(query_chars, row["chars"]) + 0.45 * jaccard(query_words, row["words"])
+        score = 0.55 * jaccard(query_chars, row["chars"]) + 0.45 * jaccard(
+            query_words, row["words"]
+        )
         if score > best_score:
             best_score = score
             best = row
@@ -527,6 +561,7 @@ def translation_memory_lookup(sentence: str, config: dict) -> dict | None:
 
 
 def split_russian_sentences(text: str) -> list[str]:
+    """Split russian sentences for this pipeline stage."""
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
     sentences = []
     for part in parts:
@@ -534,20 +569,29 @@ def split_russian_sentences(text: str) -> list[str]:
         if not cleaned:
             continue
         if len(cleaned) > 220:
-            sentences.extend(piece.strip() for piece in re.split(r"[;:]\s+|,\s+(?=а|но|и|кроме|старшие|молодые)", cleaned) if piece.strip())
+            sentences.extend(
+                piece.strip()
+                for piece in re.split(r"[;:]\s+|,\s+(?=а|но|и|кроме|старшие|молодые)", cleaned)
+                if piece.strip()
+            )
         else:
             sentences.append(cleaned)
     return sentences or [text.strip()]
 
 
-def translate_with_mt(text: str, config: dict, direction_key: str, model_path_key: str, max_new_tokens_key: str) -> str:
+def translate_with_mt(
+    text: str, config: dict, direction_key: str, model_path_key: str, max_new_tokens_key: str
+) -> str:
+    """Translate with mt for this pipeline stage."""
     import torch
     from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
     config_key = "backtranslation_config" if direction_key == "ckt_ru" else "config"
     mt_config = load_yaml(config["mt"].get(config_key, config["mt"]["config"]))
     direction = mt_config["directions"][direction_key]
-    model_path = resolve_path(config["mt"].get(model_path_key) or Path(direction["output_dir"]) / "final")
+    model_path = resolve_path(
+        config["mt"].get(model_path_key) or Path(direction["output_dir"]) / "final"
+    )
 
     device = str(config["mt"].get("device", "auto"))
     if device == "auto":
@@ -575,7 +619,9 @@ def translate_with_mt(text: str, config: dict, direction_key: str, model_path_ke
     model.to(device).eval()
     inputs = tokenizer(text, return_tensors="pt", truncation=True).to(device)
     generate_args = {
-        "num_beams": int(config["mt"].get("num_beams", mt_config["training"]["generation_num_beams"])),
+        "num_beams": int(
+            config["mt"].get("num_beams", mt_config["training"]["generation_num_beams"])
+        ),
         "max_new_tokens": int(
             config["mt"].get(max_new_tokens_key, mt_config["training"]["max_target_length"])
         ),
@@ -601,6 +647,7 @@ def translate_with_mt(text: str, config: dict, direction_key: str, model_path_ke
 
 
 def translate_ru_to_chukchi(text: str, config: dict) -> str:
+    """Translate ru to chukchi for this pipeline stage."""
     translated_sentences = []
     for sentence in split_russian_sentences(text):
         match = translation_memory_lookup(sentence, config)
@@ -622,6 +669,7 @@ def translate_ru_to_chukchi(text: str, config: dict) -> str:
 
 
 def write_translation_memory_matches(text: str, config: dict, output_path: Path) -> None:
+    """Write translation memory matches for this pipeline stage."""
     rows = []
     for sentence in split_russian_sentences(text):
         match = translation_memory_lookup(sentence, config)
@@ -643,6 +691,7 @@ def write_translation_memory_matches(text: str, config: dict, output_path: Path)
 
 
 def translate_chukchi_to_ru(text: str, config: dict) -> str:
+    """Translate chukchi to ru for this pipeline stage."""
     return translate_with_mt(
         text,
         config,
@@ -653,15 +702,16 @@ def translate_chukchi_to_ru(text: str, config: dict) -> str:
 
 
 def synthesize_chukchi(text: str, config: dict, output_path: Path) -> tuple[Path, float]:
+    """Synthesize chukchi for this pipeline stage."""
     import torch
     from transformers.utils import logging as transformers_logging
     from transformers import VitsModel, VitsTokenizer
 
     transformers_logging.set_verbosity_error()
     transformers_logging.disable_progress_bar()
-    model_path = config["tts"].get("model_path") or load_yaml(config["tts"]["config"])["model"][
-        "base_model"
-    ]
+    model_path = (
+        config["tts"].get("model_path") or load_yaml(config["tts"]["config"])["model"]["base_model"]
+    )
     device = str(config["tts"].get("device", "auto"))
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -682,7 +732,10 @@ def synthesize_chukchi(text: str, config: dict, output_path: Path) -> tuple[Path
     return output_path, duration
 
 
-def run_translated_pipeline(prompt: str, config: dict, mock_llm: bool, output_dir: Path) -> Iterator[dict]:
+def run_translated_pipeline(
+    prompt: str, config: dict, mock_llm: bool, output_dir: Path
+) -> Iterator[dict]:
+    """Run translated pipeline for this pipeline stage."""
     output_dir.mkdir(parents=True, exist_ok=True)
 
     yield {"stage": "news", "status": "running", "message": "Генерируем русскую новость"}
@@ -704,7 +757,11 @@ def run_translated_pipeline(prompt: str, config: dict, mock_llm: bool, output_di
     (output_dir / "news_ckt.txt").write_text(chukchi_text, encoding="utf-8")
     yield {"stage": "translation", "status": "done", "text": chukchi_text}
 
-    yield {"stage": "backtranslation", "status": "running", "message": "Переводим чукотский обратно на русский"}
+    yield {
+        "stage": "backtranslation",
+        "status": "running",
+        "message": "Переводим чукотский обратно на русский",
+    }
     backtranslation_text = translate_chukchi_to_ru(chukchi_text, config)
     (output_dir / "news_back_ru.txt").write_text(backtranslation_text, encoding="utf-8")
     yield {"stage": "backtranslation", "status": "done", "text": backtranslation_text}
@@ -722,6 +779,7 @@ def run_translated_pipeline(prompt: str, config: dict, mock_llm: bool, output_di
 def run_direct_chukchi_pipeline(
     prompt: str, config: dict, mock_llm: bool, output_dir: Path
 ) -> Iterator[dict]:
+    """Run direct chukchi pipeline for this pipeline stage."""
     output_dir.mkdir(parents=True, exist_ok=True)
     yield {
         "stage": "translation",
@@ -737,7 +795,11 @@ def run_direct_chukchi_pipeline(
     (output_dir / "news_ckt.txt").write_text(chukchi_text, encoding="utf-8")
     yield {"stage": "translation", "status": "done", "text": chukchi_text}
 
-    yield {"stage": "backtranslation", "status": "running", "message": "Переводим чукотский обратно на русский"}
+    yield {
+        "stage": "backtranslation",
+        "status": "running",
+        "message": "Переводим чукотский обратно на русский",
+    }
     backtranslation_text = translate_chukchi_to_ru(chukchi_text, config)
     (output_dir / "news_back_ru.txt").write_text(backtranslation_text, encoding="utf-8")
     yield {"stage": "backtranslation", "status": "done", "text": backtranslation_text}
@@ -753,6 +815,7 @@ def run_direct_chukchi_pipeline(
 
 
 def run_pipeline(prompt: str, mode: str, config: dict, mock_llm: bool) -> Iterator[dict]:
+    """Run pipeline for this pipeline stage."""
     run_id = uuid.uuid4().hex[:12]
     output_dir = resolve_path(config["output"]["dir"]) / run_id
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -765,7 +828,9 @@ def run_pipeline(prompt: str, mode: str, config: dict, mock_llm: bool) -> Iterat
                 "direct_chukchi_backend": config["llm"].get("direct_chukchi_backend"),
                 "mt_config": config["mt"].get("config"),
                 "mt_model_path": config["mt"].get("model_path"),
-                "backtranslation_config": config["mt"].get("backtranslation_config", config["mt"].get("config")),
+                "backtranslation_config": config["mt"].get(
+                    "backtranslation_config", config["mt"].get("config")
+                ),
                 "backtranslation_model_path": config["mt"].get("backtranslation_model_path"),
                 "tts_model_path": config["tts"].get("model_path"),
             },
@@ -778,7 +843,11 @@ def run_pipeline(prompt: str, mode: str, config: dict, mock_llm: bool) -> Iterat
         yield from run_translated_pipeline(prompt, config, mock_llm, output_dir)
         yield {"stage": "complete", "status": "done", "run_id": run_id}
     elif mode == "direct_chukchi":
-        yield {"stage": "news", "status": "skipped", "text": "Direct Chukchi mode: русский этап пропущен."}
+        yield {
+            "stage": "news",
+            "status": "skipped",
+            "text": "Direct Chukchi mode: русский этап пропущен.",
+        }
         yield from run_direct_chukchi_pipeline(prompt, config, mock_llm, output_dir)
         yield {"stage": "complete", "status": "done", "run_id": run_id}
     else:
@@ -786,9 +855,12 @@ def run_pipeline(prompt: str, mode: str, config: dict, mock_llm: bool) -> Iterat
 
 
 class ServerHandler(SimpleHTTPRequestHandler):
+    """Document the state and behavior for the `ServerHandler` component."""
+
     server_version = "ChukchaNews/0.1"
 
     def do_GET(self) -> None:
+        """Do get for this pipeline stage."""
         if self.path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
@@ -803,6 +875,7 @@ class ServerHandler(SimpleHTTPRequestHandler):
         return self.serve_file(STATIC_DIR / self.path.lstrip("/"))
 
     def do_POST(self) -> None:
+        """Do post for this pipeline stage."""
         if self.path != "/api/run":
             self.send_error(404)
             return
@@ -833,15 +906,20 @@ class ServerHandler(SimpleHTTPRequestHandler):
                 self.wfile.flush()
         except Exception as error:
             self.wfile.write(
-                (json.dumps({"stage": "error", "status": "error", "error": str(error)}, ensure_ascii=False) + "\n").encode(
-                    "utf-8"
-                )
+                (
+                    json.dumps(
+                        {"stage": "error", "status": "error", "error": str(error)},
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                ).encode("utf-8")
             )
             self.wfile.flush()
         finally:
             PIPELINE_LOCK.release()
 
     def serve_file(self, path: Path) -> None:
+        """Serve file for this pipeline stage."""
         if not path.exists() or not path.is_file():
             self.send_error(404)
             return
@@ -854,6 +932,7 @@ class ServerHandler(SimpleHTTPRequestHandler):
             self.wfile.write(input_file.read())
 
     def send_json(self, status: int, payload: dict) -> None:
+        """Send json for this pipeline stage."""
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -862,15 +941,19 @@ class ServerHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, format: str, *args) -> None:
+        """Log message for this pipeline stage."""
         print(f"[server] {self.address_string()} - {format % args}")
 
 
 class LocalNewsServer(ThreadingHTTPServer):
+    """Document the state and behavior for the `LocalNewsServer` component."""
+
     config: dict
     mock_llm: bool
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     host = args.host or str(config["server"]["host"])
@@ -880,6 +963,7 @@ def main() -> None:
     server.mock_llm = args.mock_llm
 
     def stop(signum, frame) -> None:
+        """Stop for this pipeline stage."""
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, stop)

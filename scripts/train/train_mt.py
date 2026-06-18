@@ -21,11 +21,13 @@ from chukcha_news.mt.modeling import (  # noqa: E402
 
 
 def count_jsonl(path: Path) -> int:
+    """Count jsonl for this pipeline stage."""
     with path.open("r", encoding="utf-8") as input_file:
         return sum(1 for line in input_file if line.strip())
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     parser.add_argument("--direction", choices=["ru_ckt", "ckt_ru"], required=True)
@@ -35,6 +37,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate(config: dict, direction: str) -> dict:
+    """Validate for this pipeline stage."""
     direction_config = config["directions"][direction]
     files = {
         split: resolve_path(direction_config[f"{split}_file"])
@@ -55,6 +58,7 @@ def validate(config: dict, direction: str) -> dict:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     summary = validate(config, args.direction)
@@ -114,6 +118,7 @@ def main() -> None:
     model.config.use_cache = not training["gradient_checkpointing"]
 
     def tokenize(batch: dict) -> dict:
+        """Tokenize for this pipeline stage."""
         model_inputs = tokenizer(
             batch["source_text"],
             max_length=training["max_source_length"],
@@ -133,6 +138,7 @@ def main() -> None:
     chrf = evaluate.load("chrf")
 
     def compute_metrics(eval_prediction) -> dict:
+        """Compute metrics for this pipeline stage."""
         predictions, labels = eval_prediction
         if isinstance(predictions, tuple):
             predictions = predictions[0]
@@ -147,9 +153,9 @@ def main() -> None:
             "bleu": sacrebleu.compute(
                 predictions=decoded_predictions, references=[[x] for x in decoded_labels]
             )["score"],
-            "chrf": chrf.compute(
-                predictions=decoded_predictions, references=decoded_labels
-            )["score"],
+            "chrf": chrf.compute(predictions=decoded_predictions, references=decoded_labels)[
+                "score"
+            ],
         }
 
     output_dir = resolve_path(direction_config["output_dir"])

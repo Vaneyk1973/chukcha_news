@@ -1,3 +1,5 @@
+"""Reusable machine-translation helper module for Chukchi News Voice."""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +10,7 @@ TEXT_TOKEN_RE = re.compile(r"[А-Яа-яЁёӃӄӇӈԒԓA-Za-z']+")
 
 
 def repetition_features(text: str) -> dict[str, float]:
+    """Repetition features for this pipeline stage."""
     tokens = [token.casefold() for token in TEXT_TOKEN_RE.findall(text)]
     if not tokens:
         return {
@@ -49,6 +52,7 @@ def repetition_features(text: str) -> dict[str, float]:
 
 
 def has_repetition_collapse(text: str) -> bool:
+    """Has repetition collapse for this pipeline stage."""
     features = repetition_features(text)
     token_count = int(features["token_count"])
     if token_count >= 4 and features["longest_token_run"] >= 3:
@@ -71,6 +75,7 @@ def has_repetition_collapse(text: str) -> bool:
 
 
 def mt_generation_quality_args(direction_key: str) -> dict[str, float | int]:
+    """Mt generation quality args for this pipeline stage."""
     if direction_key != "ru_ckt":
         return {}
     return {

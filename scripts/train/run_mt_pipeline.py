@@ -25,6 +25,7 @@ DIRECTIONS = ("ru_ckt", "ckt_ru")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mt.yaml")
     parser.add_argument("--python", default=sys.executable)
@@ -34,10 +35,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def utc_now() -> str:
+    """Utc now for this pipeline stage."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def write_json(path: Path, value: dict) -> None:
+    """Write json for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f"{path.suffix}.tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -45,6 +48,7 @@ def write_json(path: Path, value: dict) -> None:
 
 
 def archive_existing_log(path: Path) -> Path | None:
+    """Archive existing log for this pipeline stage."""
     if not path.exists():
         return None
     archive_dir = path.parent / "archive"
@@ -60,6 +64,7 @@ def archive_existing_log(path: Path) -> Path | None:
 
 
 def latest_checkpoint(output_dir: Path) -> Path | None:
+    """Latest checkpoint for this pipeline stage."""
     checkpoints = []
     for path in output_dir.glob("checkpoint-*"):
         match = re.fullmatch(r"checkpoint-(\d+)", path.name)
@@ -69,6 +74,7 @@ def latest_checkpoint(output_dir: Path) -> Path | None:
 
 
 def load_metrics(direction: str, model_label: str) -> dict | None:
+    """Load metrics for this pipeline stage."""
     path = ROOT / "reports" / "mt" / direction / model_label / "metrics.json"
     if not path.exists():
         return None
@@ -76,6 +82,7 @@ def load_metrics(direction: str, model_label: str) -> dict | None:
 
 
 def build_summary() -> dict:
+    """Build summary for this pipeline stage."""
     directions = {}
     for direction in DIRECTIONS:
         trained = load_metrics(direction, "trained")
@@ -92,7 +99,10 @@ def build_summary() -> dict:
 
 
 class Pipeline:
+    """Document the state and behavior for the `Pipeline` component."""
+
     def __init__(self, args: argparse.Namespace, config: dict) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         self.args = args
         self.config = config
         self.status = {
@@ -104,10 +114,12 @@ class Pipeline:
         }
 
     def save_status(self) -> None:
+        """Save status for this pipeline stage."""
         self.status["updated_at"] = utc_now()
         write_json(STATUS_PATH, self.status)
 
     def run(self, name: str, command: list[str], complete: bool = False) -> None:
+        """Run for this pipeline stage."""
         if complete and not self.args.force:
             print(f"[skip] {name}: output already exists", flush=True)
             self.status["stages"][name] = {"state": "skipped", "finished_at": utc_now()}
@@ -156,6 +168,7 @@ class Pipeline:
             raise subprocess.CalledProcessError(return_code, command)
 
     def train(self, direction: str) -> None:
+        """Train for this pipeline stage."""
         output_dir = resolve_path(self.config["directions"][direction]["output_dir"])
         command = [
             self.args.python,
@@ -171,6 +184,7 @@ class Pipeline:
         self.run(f"train-{direction}", command, complete=(output_dir / "final").is_dir())
 
     def evaluate(self, direction: str, baseline: bool) -> None:
+        """Evaluate for this pipeline stage."""
         label = "baseline" if baseline else "trained"
         command = [
             self.args.python,
@@ -186,6 +200,7 @@ class Pipeline:
         self.run(f"evaluate-{label}-{direction}", command, complete=metrics.exists())
 
     def execute(self) -> None:
+        """Execute for this pipeline stage."""
         if not self.config["training"]["enabled"]:
             raise RuntimeError("Set training.enabled=true in configs/mt.yaml before running.")
 
@@ -220,13 +235,16 @@ class Pipeline:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     pipeline = Pipeline(args, config)
     try:
         pipeline.execute()
     except BaseException as error:
-        pipeline.status["state"] = "interrupted" if isinstance(error, KeyboardInterrupt) else "failed"
+        pipeline.status["state"] = (
+            "interrupted" if isinstance(error, KeyboardInterrupt) else "failed"
+        )
         pipeline.status["error"] = str(error) or type(error).__name__
         pipeline.status["finished_at"] = utc_now()
         pipeline.save_status()

@@ -37,15 +37,18 @@ ASR_FIELDS = SEGMENT_FIELDS + ["transcript", "confidence", "label_source"]
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run for this pipeline stage."""
     return subprocess.run(command, capture_output=True, text=True, check=False)
 
 
 def require_binary(name: str) -> None:
+    """Require binary for this pipeline stage."""
     if shutil.which(name) is None:
         raise RuntimeError(f"Required executable is missing: {name}")
 
 
 def probe_duration(path: Path) -> float | None:
+    """Probe duration for this pipeline stage."""
     result = run(
         [
             "ffprobe",
@@ -68,6 +71,7 @@ def probe_duration(path: Path) -> float | None:
 
 
 def parse_silences(stderr: str) -> list[tuple[float, float]]:
+    """Parse silences for this pipeline stage."""
     silences: list[tuple[float, float]] = []
     current_start: float | None = None
     for line in stderr.splitlines():
@@ -89,6 +93,7 @@ def speech_regions(
     max_segment: float,
     padding: float,
 ) -> list[tuple[float, float]]:
+    """Speech regions for this pipeline stage."""
     regions: list[tuple[float, float]] = []
     cursor = 0.0
     for silence_start, silence_end in silences:
@@ -108,6 +113,7 @@ def bound_regions(
     max_segment: float,
     padding: float,
 ) -> list[tuple[float, float]]:
+    """Bound regions for this pipeline stage."""
     bounded: list[tuple[float, float]] = []
     for start, end in regions:
         start = max(0.0, start - padding)
@@ -124,7 +130,10 @@ def bound_regions(
 
 
 class SpeechDetector:
+    """Document the state and behavior for the `SpeechDetector` component."""
+
     def __init__(self, config: dict, sample_rate: int, method: str | None = None) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         self.config = config
         self.sample_rate = sample_rate
         self.method = method or config["vad_method"]
@@ -143,6 +152,7 @@ class SpeechDetector:
             raise ValueError(f"Unsupported VAD method: {self.method}")
 
     def detect(self, path: Path, duration: float) -> list[tuple[float, float]]:
+        """Detect for this pipeline stage."""
         if self.method == "silero":
             audio = self.read_audio(str(path), sampling_rate=self.sample_rate)
             timestamps = self.get_speech_timestamps(
@@ -181,7 +191,9 @@ class SpeechDetector:
             ]
         )
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg silence detection failed for {path}:\n{result.stderr[-1000:]}")
+            raise RuntimeError(
+                f"FFmpeg silence detection failed for {path}:\n{result.stderr[-1000:]}"
+            )
         return speech_regions(
             duration,
             parse_silences(result.stderr),
@@ -192,11 +204,13 @@ class SpeechDetector:
 
 
 def segment_id(source_relative: str, start: float, end: float) -> str:
+    """Segment id for this pipeline stage."""
     digest = hashlib.sha256(f"{source_relative}\0{start:.3f}\0{end:.3f}".encode()).hexdigest()
     return digest[:20]
 
 
 def write_segment(source: Path, target: Path, start: float, end: float, sample_rate: int) -> None:
+    """Write segment for this pipeline stage."""
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(".tmp.wav")
     result = run(
@@ -229,6 +243,7 @@ def write_segment(source: Path, target: Path, start: float, end: float, sample_r
 
 
 def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
+    """Write csv for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output:
         writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
@@ -237,6 +252,7 @@ def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
 
 
 def load_state(path: Path) -> dict[str, dict]:
+    """Load state for this pipeline stage."""
     if not path.exists():
         return {}
     state = {}
@@ -249,6 +265,7 @@ def load_state(path: Path) -> dict[str, dict]:
 
 
 def write_state(path: Path, state: dict[str, dict]) -> None:
+    """Write state for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
     with temporary.open("w", encoding="utf-8") as output:
@@ -258,6 +275,7 @@ def write_state(path: Path, state: dict[str, dict]) -> None:
 
 
 def read_wav(path: Path) -> list[float]:
+    """Read wav for this pipeline stage."""
     with wave.open(str(path), "rb") as wav_file:
         if wav_file.getnchannels() != 1 or wav_file.getsampwidth() != 2:
             raise ValueError(f"Expected mono 16-bit PCM WAV: {path}")
@@ -270,17 +288,24 @@ def read_wav(path: Path) -> list[float]:
 
 
 class MMSTranscriber:
+    """Document the state and behavior for the `MMSTranscriber` component."""
+
     def __init__(self, model_name: str, language_code: str, device: str) -> None:
+        """Implement the `__init__` protocol hook for this object."""
         try:
             import torch
             from transformers import AutoProcessor, Wav2Vec2ForCTC
         except ImportError as error:
-            raise RuntimeError("Install ASR dependencies with: python3 -m pip install -e '.[asr]'") from error
+            raise RuntimeError(
+                "Install ASR dependencies with: python3 -m pip install -e '.[asr]'"
+            ) from error
 
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cuda" and not torch.cuda.is_available():
-            raise RuntimeError("CUDA was requested, but the installed PyTorch build has no CUDA support.")
+            raise RuntimeError(
+                "CUDA was requested, but the installed PyTorch build has no CUDA support."
+            )
         self.torch = torch
         self.device = device
         self.processor = AutoProcessor.from_pretrained(model_name)
@@ -290,6 +315,7 @@ class MMSTranscriber:
         self.model.to(device).eval()
 
     def transcribe(self, paths: list[Path], sample_rate: int) -> list[tuple[str, float]]:
+        """Transcribe for this pipeline stage."""
         audio = [read_wav(path) for path in paths]
         inputs = self.processor(
             audio, sampling_rate=sample_rate, return_tensors="pt", padding=True
@@ -298,8 +324,12 @@ class MMSTranscriber:
             logits = self.model(**inputs).logits
             predicted_ids = self.torch.argmax(logits, dim=-1)
             frame_confidence = logits.softmax(dim=-1).amax(dim=-1)
-            input_lengths = self.torch.tensor([len(samples) for samples in audio], device=self.device)
-            output_lengths = self.model._get_feat_extract_output_lengths(input_lengths).cpu().tolist()
+            input_lengths = self.torch.tensor(
+                [len(samples) for samples in audio], device=self.device
+            )
+            output_lengths = (
+                self.model._get_feat_extract_output_lengths(input_lengths).cpu().tolist()
+            )
             confidence = self.torch.stack(
                 [scores[:length].mean() for scores, length in zip(frame_confidence, output_lengths)]
             )
@@ -310,6 +340,7 @@ class MMSTranscriber:
 def prepare_segments(
     config: dict, limit: int | None, dry_run: bool, vad_method: str | None
 ) -> tuple[list[dict], dict]:
+    """Prepare segments for this pipeline stage."""
     data = config["data"]
     preprocessing = config["preprocessing"]
     raw_root = resolve_path(data["raw_audio_root"])
@@ -362,7 +393,10 @@ def prepare_segments(
     }
 
 
-def transcribe_segments(config: dict, rows: list[dict], limit: int | None) -> tuple[dict[str, dict], dict]:
+def transcribe_segments(
+    config: dict, rows: list[dict], limit: int | None
+) -> tuple[dict[str, dict], dict]:
+    """Transcribe segments for this pipeline stage."""
     data = config["data"]
     transcription = config["transcription"]
     state_path = resolve_path(data["transcription_state"])
@@ -393,17 +427,21 @@ def transcribe_segments(config: dict, rows: list[dict], limit: int | None) -> tu
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/asr.yaml")
     parser.add_argument("--stage", choices=["segment", "transcribe", "all"], default="all")
     parser.add_argument("--limit", type=int, help="Limit source files during segmentation.")
     parser.add_argument("--transcribe-limit", type=int, help="Limit new segments transcribed.")
     parser.add_argument("--vad", choices=["silero", "silence"], help="Override configured VAD.")
-    parser.add_argument("--dry-run", action="store_true", help="Detect boundaries without writing WAVs.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Detect boundaries without writing WAVs."
+    )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     require_binary("ffmpeg")
     require_binary("ffprobe")

@@ -1,9 +1,12 @@
+"""Reusable machine-translation helper module for Chukchi News Voice."""
+
 from __future__ import annotations
 
 from typing import Any
 
 
 def token_id(tokenizer: Any, token: str) -> int | None:
+    """Token id for this pipeline stage."""
     value = tokenizer.convert_tokens_to_ids(token)
     if value is None or value == tokenizer.unk_token_id:
         return None
@@ -13,6 +16,7 @@ def token_id(tokenizer: Any, token: str) -> int | None:
 def ensure_language_token(
     tokenizer: Any, model: Any | None, language: str, initialize_from: str
 ) -> int:
+    """Ensure language token for this pipeline stage."""
     existing = token_id(tokenizer, language)
     if existing is not None:
         return existing
@@ -47,6 +51,7 @@ def ensure_language_token(
 def ensure_vocabulary_tokens(
     tokenizer: Any, model: Any | None, token_mapping: dict[str, str]
 ) -> list[int]:
+    """Ensure vocabulary tokens for this pipeline stage."""
     missing = [token for token in token_mapping if token_id(tokenizer, token) is None]
     if not missing:
         return [token_id(tokenizer, token) for token in token_mapping]
@@ -81,6 +86,7 @@ def ensure_vocabulary_tokens(
 
 
 def configure_tokenizer(tokenizer: Any, direction: dict) -> None:
+    """Configure tokenizer for this pipeline stage."""
     source_language = direction["source_language"]
     target_language = direction["target_language"]
     for language in (source_language, target_language):
@@ -91,6 +97,7 @@ def configure_tokenizer(tokenizer: Any, direction: dict) -> None:
 
 
 def generation_kwargs(tokenizer: Any, direction: dict) -> dict[str, int]:
+    """Generation kwargs for this pipeline stage."""
     target_id = token_id(tokenizer, direction["target_language"])
     if target_id is None:
         raise ValueError(f"Tokenizer is missing target language: {direction['target_language']}")
@@ -98,6 +105,7 @@ def generation_kwargs(tokenizer: Any, direction: dict) -> dict[str, int]:
 
 
 def prefer_max_new_tokens(model: Any) -> None:
+    """Prefer max new tokens for this pipeline stage."""
     generation_config = getattr(model, "generation_config", None)
     if generation_config is not None and hasattr(generation_config, "max_length"):
         generation_config.max_length = None

@@ -24,6 +24,7 @@ from chukcha_news.mt.quality import mt_generation_quality_args  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("text")
     parser.add_argument("--config", default="configs/mt.yaml")
@@ -34,6 +35,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     direction = config["directions"][args.direction]

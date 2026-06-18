@@ -16,6 +16,7 @@ from chukcha_news.config import load_yaml, resolve_path  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/llm_chukchi.yaml")
     parser.add_argument("--dry-run", action="store_true")
@@ -23,6 +24,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def latest_checkpoint(output_dir: Path) -> Path | None:
+    """Latest checkpoint for this pipeline stage."""
     checkpoints = []
     for path in output_dir.glob("checkpoint-*"):
         if not path.is_dir():
@@ -38,6 +40,7 @@ def latest_checkpoint(output_dir: Path) -> Path | None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     data = config["data"]
@@ -69,7 +72,9 @@ def main() -> None:
         from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         from trl import SFTConfig, SFTTrainer
     except ImportError as error:
-        raise RuntimeError("Install LLM dependencies with: python3 -m pip install -e '.[llm]'") from error
+        raise RuntimeError(
+            "Install LLM dependencies with: python3 -m pip install -e '.[llm]'"
+        ) from error
 
     tokenizer = AutoTokenizer.from_pretrained(config["model"]["base_model"], use_fast=True)
     if tokenizer.pad_token is None:
@@ -94,6 +99,7 @@ def main() -> None:
         model = prepare_model_for_kbit_training(model)
 
     def format_example(example: dict) -> str:
+        """Format example for this pipeline stage."""
         return tokenizer.apply_chat_template(
             example["messages"], tokenize=False, add_generation_prompt=False
         )

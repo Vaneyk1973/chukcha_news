@@ -15,6 +15,7 @@ DEFAULT_CONFIG = ROOT / "configs" / "tts.yaml"
 
 
 def character_error_rate(reference: str, hypothesis: str) -> float:
+    """Character error rate for this pipeline stage."""
     reference = reference.strip()
     hypothesis = hypothesis.strip()
     if not reference:
@@ -36,6 +37,7 @@ def character_error_rate(reference: str, hypothesis: str) -> float:
 
 
 def rejection_reasons(row: dict, config: dict) -> list[str]:
+    """Rejection reasons for this pipeline stage."""
     reasons = []
     duration = float(row.get("duration_sec", 0.0))
     text = str(row.get("text", "")).strip()
@@ -68,6 +70,7 @@ def rejection_reasons(row: dict, config: dict) -> list[str]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--input", type=Path)
@@ -77,6 +80,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
     pseudo_config = config["pseudo_labeling"]

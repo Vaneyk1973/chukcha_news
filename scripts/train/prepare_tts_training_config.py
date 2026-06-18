@@ -16,16 +16,19 @@ from chukcha_news.config import load_yaml, resolve_path  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/tts.yaml")
     return parser.parse_args()
 
 
 def optional_int(value):
+    """Optional int for this pipeline stage."""
     return None if value is None else int(value)
 
 
 def capped_optional_int(value, path: Path):
+    """Capped optional int for this pipeline stage."""
     requested = optional_int(value)
     if requested is None:
         return None
@@ -35,6 +38,7 @@ def capped_optional_int(value, path: Path):
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     data = config["data"]
@@ -96,7 +100,9 @@ def main() -> None:
 
     output_path = resolve_path(training["config_path"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(trainer_config, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path.write_text(
+        json.dumps(trainer_config, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(json.dumps({"config": str(output_path), "output_dir": str(output_dir)}, indent=2))
 
 

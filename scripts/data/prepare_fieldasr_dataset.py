@@ -38,11 +38,13 @@ MANIFEST_FIELDS = [
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     text = text.lstrip("\ufeff")
     return re.sub(r"\s+", " ", text).strip()
 
 
 def safe_member_path(root: Path, name: str) -> Path:
+    """Safe member path for this pipeline stage."""
     target = (root / name).resolve()
     if root.resolve() not in target.parents and target != root.resolve():
         raise ValueError(f"Archive member escapes destination: {name}")
@@ -50,6 +52,7 @@ def safe_member_path(root: Path, name: str) -> Path:
 
 
 def extract_archive(path: Path, destination: Path) -> None:
+    """Extract archive for this pipeline stage."""
     destination.mkdir(parents=True, exist_ok=True)
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
@@ -78,6 +81,7 @@ def extract_archive(path: Path, destination: Path) -> None:
 
 
 def download(url: str, destination: Path) -> Path:
+    """Download for this pipeline stage."""
     destination.mkdir(parents=True, exist_ok=True)
     name = Path(urllib.parse.urlparse(url).path).name or hashlib.sha256(url.encode()).hexdigest()
     target = destination / name
@@ -92,6 +96,7 @@ def download(url: str, destination: Path) -> Path:
 
 
 def index_files(roots: list[Path], extensions: set[str] | None = None) -> dict[str, list[Path]]:
+    """Index files for this pipeline stage."""
     index: dict[str, list[Path]] = {}
     for root in roots:
         if not root.exists():
@@ -105,6 +110,7 @@ def index_files(roots: list[Path], extensions: set[str] | None = None) -> dict[s
 
 
 def probe_duration(path: Path) -> float | None:
+    """Probe duration for this pipeline stage."""
     result = subprocess.run(
         [
             "ffprobe",
@@ -129,6 +135,7 @@ def probe_duration(path: Path) -> float | None:
 
 
 def duration_matches(actual: float, expected: float, config: dict) -> bool:
+    """Duration matches for this pipeline stage."""
     tolerance = max(
         float(config["duration_tolerance_sec"]),
         expected * float(config["duration_tolerance_ratio"]),
@@ -137,6 +144,7 @@ def duration_matches(actual: float, expected: float, config: dict) -> bool:
 
 
 def normalize_audio(source: Path, target: Path, sample_rate: int) -> None:
+    """Normalize audio for this pipeline stage."""
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(".tmp.wav")
     result = subprocess.run(
@@ -168,11 +176,13 @@ def normalize_audio(source: Path, target: Path, sample_rate: int) -> None:
 
 
 def read_legacy_metadata(path: Path) -> list[dict]:
+    """Read legacy metadata for this pipeline stage."""
     with path.open("r", encoding="utf-8-sig", newline="") as input_file:
         return list(csv.DictReader(input_file))
 
 
 def read_metadata_archive(path: Path, member: str) -> list[dict]:
+    """Read metadata archive for this pipeline stage."""
     with zipfile.ZipFile(path) as archive, archive.open(member) as raw_file:
         lines = (line.decode("utf-8-sig") for line in raw_file)
         rows = []
@@ -188,6 +198,7 @@ def read_metadata_archive(path: Path, member: str) -> list[dict]:
 
 
 def read_split_metadata(source_config: dict, source_split: str) -> tuple[list[dict], str]:
+    """Read split metadata for this pipeline stage."""
     archive_path = resolve_path(source_config["metadata_archive"])
     archive_members = {
         "train": "train_new.tsv",
@@ -202,6 +213,7 @@ def read_split_metadata(source_config: dict, source_split: str) -> tuple[list[di
 
 
 def write_manifest(path: Path, rows: list[dict]) -> None:
+    """Write manifest for this pipeline stage."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as output:
         writer = csv.DictWriter(output, fieldnames=MANIFEST_FIELDS)
@@ -210,6 +222,7 @@ def write_manifest(path: Path, rows: list[dict]) -> None:
 
 
 def relative_or_absolute(path: Path) -> str:
+    """Relative or absolute for this pipeline stage."""
     try:
         return str(path.resolve().relative_to(ROOT))
     except ValueError:
@@ -217,6 +230,7 @@ def relative_or_absolute(path: Path) -> str:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/fieldasr.yaml")
     parser.add_argument("--archive-url", action="append", default=[])
@@ -228,6 +242,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         raise RuntimeError("ffmpeg and ffprobe are required")
@@ -251,7 +266,9 @@ def main() -> None:
                 {"archive": str(archive), "status": "extracted", "path": str(extract_root)}
             )
         except Exception as error:
-            download_results.append({"archive": str(archive), "status": "failed", "error": str(error)})
+            download_results.append(
+                {"archive": str(archive), "status": "failed", "error": str(error)}
+            )
     if not args.skip_download:
         for url in dict.fromkeys(urls):
             try:
@@ -325,8 +342,10 @@ def main() -> None:
             if not duration_matches(actual_duration, expected_duration, validation):
                 report["rejections"]["duration_mismatch"] += 1
                 continue
-            if not float(validation["min_duration_sec"]) <= actual_duration <= float(
-                validation["max_duration_sec"]
+            if (
+                not float(validation["min_duration_sec"])
+                <= actual_duration
+                <= float(validation["max_duration_sec"])
             ):
                 report["rejections"]["duration_out_of_range"] += 1
                 continue
@@ -353,7 +372,9 @@ def main() -> None:
                     "text": text,
                     "duration_sec": f"{normalized_duration:.3f}",
                     "source_audio_path": relative_or_absolute(source_audio),
-                    "transcript_path": "" if transcript is None else relative_or_absolute(transcript),
+                    "transcript_path": ""
+                    if transcript is None
+                    else relative_or_absolute(transcript),
                 }
             )
         write_manifest(manifest_root / f"{output_split}.csv", accepted)
@@ -362,9 +383,7 @@ def main() -> None:
             "metadata_source": metadata_source,
             "accepted": len(accepted),
             "recovery_ratio": round(len(accepted) / len(metadata_rows), 4),
-            "duration_hours": round(
-                sum(float(row["duration_sec"]) for row in accepted) / 3600, 3
-            ),
+            "duration_hours": round(sum(float(row["duration_sec"]) for row in accepted) / 3600, 3),
         }
 
     report["rejections"] = dict(report["rejections"])

@@ -17,10 +17,12 @@ DEFAULT_REPORT = ROOT / "reports" / "tts_top1h_selection.json"
 
 
 def normalize_text(text: str) -> str:
+    """Normalize text for this pipeline stage."""
     return re.sub(r"\s+", " ", text).strip()
 
 
 def as_float(row: dict, key: str, default: float = 0.0) -> float:
+    """As float for this pipeline stage."""
     try:
         return float(row.get(key, "") or default)
     except ValueError:
@@ -28,6 +30,7 @@ def as_float(row: dict, key: str, default: float = 0.0) -> float:
 
 
 def chars_per_second(row: dict) -> float:
+    """Chars per second for this pipeline stage."""
     duration = as_float(row, "duration_sec")
     if duration <= 0:
         return 0.0
@@ -35,6 +38,7 @@ def chars_per_second(row: dict) -> float:
 
 
 def quality_score(row: dict) -> float:
+    """Quality score for this pipeline stage."""
     confidence = as_float(row, "confidence")
     duration = as_float(row, "duration_sec")
     cps = chars_per_second(row)
@@ -58,6 +62,7 @@ def quality_score(row: dict) -> float:
 
 
 def usable(row: dict, min_duration: float, max_duration: float, min_confidence: float) -> bool:
+    """Usable for this pipeline stage."""
     text = normalize_text(row.get("transcript", ""))
     duration = as_float(row, "duration_sec")
     if not text:
@@ -75,6 +80,7 @@ def usable(row: dict, min_duration: float, max_duration: float, min_confidence: 
 
 
 def convert_row(row: dict) -> dict:
+    """Convert row for this pipeline stage."""
     return {
         "segment_id": row["segment_id"],
         "audio_path": row["audio_path"],
@@ -95,6 +101,7 @@ def convert_row(row: dict) -> dict:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -107,6 +114,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     with args.input.open("r", encoding="utf-8", newline="") as input_file:
         rows = list(csv.DictReader(input_file))

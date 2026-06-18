@@ -19,6 +19,7 @@ EXTERNAL = ROOT / "external" / "finetune-hf-vits"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/tts.yaml")
     parser.add_argument("--force", action="store_true")
@@ -26,10 +27,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(command: list[str], cwd: Path) -> None:
+    """Run for this pipeline stage."""
     subprocess.run(command, cwd=cwd, check=True)
 
 
 def build_monotonic_align() -> None:
+    """Build monotonic align for this pipeline stage."""
     package_dir = EXTERNAL / "monotonic_align" / "monotonic_align"
     shared_objects = list(package_dir.glob("core*.so"))
     if shared_objects:
@@ -40,6 +43,7 @@ def build_monotonic_align() -> None:
 
 
 def main() -> None:
+    """Run the command-line workflow for this module."""
     args = parse_args()
     config = load_yaml(args.config)
     model_config = config["model"]

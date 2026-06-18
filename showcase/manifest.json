@@ -1,0 +1,84 @@
+{
+  "snapshots": [
+    {
+      "slug": "translated-fishermen-clean",
+      "title": "RU -> CKT: помощь рыбакам",
+      "mode": "translated",
+      "run_id": "4e0ffe776b07",
+      "path": "translated-fishermen-clean/index.html",
+      "audio": "translated-fishermen-clean/news_ckt.wav",
+      "backtranslation": "",
+      "screenshot": "translated-fishermen-clean/snapshot.png"
+    },
+    {
+      "slug": "translated-roads-clean",
+      "title": "RU -> CKT: дороги и тундра",
+      "mode": "translated",
+      "run_id": "d3b20a43d947",
+      "path": "translated-roads-clean/index.html",
+      "audio": "translated-roads-clean/news_ckt.wav",
+      "backtranslation": "",
+      "screenshot": "translated-roads-clean/snapshot.png"
+    },
+    {
+      "slug": "translated-school-clean",
+      "title": "RU -> CKT: школьная экоакция",
+      "mode": "translated",
+      "run_id": "6db02f3cccc2",
+      "path": "translated-school-clean/index.html",
+      "audio": "translated-school-clean/news_ckt.wav",
+      "backtranslation": "translated-school-clean/news_back_ru.txt",
+      "screenshot": "translated-school-clean/snapshot.png"
+    },
+    {
+      "slug": "translated-clinic-original",
+      "title": "RU -> CKT: медицинский кабинет",
+      "mode": "translated",
+      "run_id": "0e3e26914279",
+      "path": "translated-clinic-original/index.html",
+      "audio": "translated-clinic-original/news_ckt.wav",
+      "backtranslation": "translated-clinic-original/news_back_ru.txt",
+      "screenshot": "translated-clinic-original/snapshot.png"
+    },
+    {
+      "slug": "direct-roads-lora",
+      "title": "Direct Chukchi: дороги и тундра",
+      "mode": "direct_chukchi",
+      "run_id": "b877e24b01ef",
+      "path": "direct-roads-lora/index.html",
+      "audio": "direct-roads-lora/news_ckt.wav",
+      "backtranslation": "",
+      "screenshot": "direct-roads-lora/snapshot.png"
+    },
+    {
+      "slug": "direct-radio-lora",
+      "title": "Direct Chukchi: короткая радионовость",
+      "mode": "direct_chukchi",
+      "run_id": "44f6de5658a1",
+      "path": "direct-radio-lora/index.html",
+      "audio": "direct-radio-lora/news_ckt.wav",
+      "backtranslation": "direct-radio-lora/news_back_ru.txt",
+      "screenshot": "direct-radio-lora/snapshot.png"
+    },
+    {
+      "slug": "direct-region-lora",
+      "title": "Direct Chukchi: региональное сообщение",
+      "mode": "direct_chukchi",
+      "run_id": "82ff400abd4d",
+      "path": "direct-region-lora/index.html",
+      "audio": "direct-region-lora/news_ckt.wav",
+      "backtranslation": "direct-region-lora/news_back_ru.txt",
+      "screenshot": "direct-region-lora/snapshot.png"
+    },
+    {
+      "slug": "direct-school-lora",
+      "title": "Direct Chukchi: школьники и берег",
+      "mode": "direct_chukchi",
+      "run_id": "08c64e177374",
+      "path": "direct-school-lora/index.html",
+      "audio": "direct-school-lora/news_ckt.wav",
+      "backtranslation": "direct-school-lora/news_back_ru.txt",
+      "screenshot": "direct-school-lora/snapshot.png"
+    }
+  ]
+}

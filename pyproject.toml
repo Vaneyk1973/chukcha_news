@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chukcha-news"
+version = "0.1.0"
+description = "Pipeline skeleton for Chukchi news generation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.0",
+  "PyYAML>=6.0",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+mt = [
+  "accelerate>=1.0",
+  "datasets>=3.0",
+  "evaluate>=0.4",
+  "sacrebleu>=2.4",
+  "sentencepiece>=0.2",
+  "torch>=2.2",
+  "transformers>=4.46",
+]
+asr = [
+  "accelerate>=1.0",
+  "silero-vad>=6.0",
+  "torch>=2.2",
+  "torchaudio>=2.2",
+  "transformers>=4.46",
+]
+tts = [
+  "accelerate>=1.0",
+  "Cython>=3.0",
+  "datasets[audio]>=3.0",
+  "matplotlib>=3.8",
+  "scipy>=1.11",
+  "tensorboard>=2.15",
+  "torch>=2.2",
+  "tqdm>=4.66",
+  "transformers>=4.46",
+]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.8",
+]
+llm = [
+  "accelerate>=1.0",
+  "bitsandbytes>=0.43",
+  "datasets>=3.0",
+  "peft>=0.13",
+  "torch>=2.2",
+  "transformers>=4.46",
+  "trl>=0.12",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

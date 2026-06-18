@@ -1,0 +1,73 @@
+stage:
+  name: mt
+  status: ready
+
+tokenizer:
+  additional_tokens:
+    Ӄ: К
+    ӄ: к
+    Ӈ: Н
+    ӈ: н
+    Ԓ: Л
+    ԓ: л
+
+data:
+  source_path: data/raw/hse_parallel_corpus/data.csv
+  output_dir: data/processed/mt
+  min_score: 0.5
+  max_source_chars: 1000
+  max_target_chars: 1000
+  split_seed: chukcha-news-v1
+  train_ratio: 0.90
+  validation_ratio: 0.05
+  test_ratio: 0.05
+
+directions:
+  ru_ckt:
+    source_column: ru
+    target_column: ckt
+    train_file: data/processed/mt/ru_ckt/train.jsonl
+    validation_file: data/processed/mt/ru_ckt/validation.jsonl
+    test_file: data/processed/mt/ru_ckt/test.jsonl
+    base_model: facebook/nllb-200-distilled-600M
+    baseline_model: HSE-Chukchi-NLP/mbart50-rus-ckt
+    source_language: rus_Cyrl
+    target_language: ckt_Cyrl
+    initialize_target_language_from: kir_Cyrl
+    output_dir: models/checkpoints/mt/ru_ckt
+  ckt_ru:
+    source_column: ckt
+    target_column: ru
+    train_file: data/processed/mt/ckt_ru/train.jsonl
+    validation_file: data/processed/mt/ckt_ru/validation.jsonl
+    test_file: data/processed/mt/ckt_ru/test.jsonl
+    base_model: facebook/nllb-200-distilled-600M
+    baseline_model: HSE-Chukchi-NLP/mbart50-ckt-rus
+    source_language: ckt_Cyrl
+    target_language: rus_Cyrl
+    initialize_source_language_from: kir_Cyrl
+    output_dir: models/checkpoints/mt/ckt_ru
+
+training:
+  enabled: true
+  require_cuda: true
+  seed: 42
+  max_source_length: 256
+  max_target_length: 256
+  num_train_epochs: 3
+  learning_rate: 0.00002
+  weight_decay: 0.01
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  fp16: false
+  bf16: true
+  optim: adafactor
+  eval_steps: 500
+  save_steps: 500
+  logging_steps: 50
+  save_total_limit: 2
+  generation_num_beams: 4
+  predict_with_generate: true
+  report_to: none

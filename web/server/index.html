@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chukchi News Voice</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="composer">
+        <div>
+          <h1>Chukchi News Voice</h1>
+        </div>
+        <form id="prompt-form">
+          <div class="mode-switch" role="radiogroup" aria-label="Режим работы">
+            <label>
+              <input type="radio" name="mode" value="translated" checked />
+              <span>RU -> Chukchi</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="direct_chukchi" />
+              <span>Direct Chukchi</span>
+            </label>
+          </div>
+          <div class="model-grid" aria-label="Выбор моделей">
+            <label>
+              <span>Русская новость</span>
+              <select id="model-llm-news" data-model-select="llm_news"></select>
+              <small id="model-llm-news-description"></small>
+            </label>
+            <label>
+              <span>Direct Chukchi</span>
+              <select id="model-direct-chukchi" data-model-select="direct_chukchi"></select>
+              <small id="model-direct-chukchi-description"></small>
+            </label>
+            <label>
+              <span>RU -> CKT</span>
+              <select id="model-mt-ru-ckt" data-model-select="mt_ru_ckt"></select>
+              <small id="model-mt-ru-ckt-description"></small>
+            </label>
+            <label>
+              <span>CKT -> RU</span>
+              <select id="model-mt-ckt-ru" data-model-select="mt_ckt_ru"></select>
+              <small id="model-mt-ckt-ru-description"></small>
+            </label>
+            <label>
+              <span>Озвучка</span>
+              <select id="model-tts" data-model-select="tts"></select>
+              <small id="model-tts-description"></small>
+            </label>
+          </div>
+          <label for="prompt">Промпт для новости</label>
+          <textarea
+            id="prompt"
+            name="prompt"
+            rows="5"
+            placeholder="Например: в Анадыре открыли новый пункт помощи рыбакам после сильного ветра"
+          ></textarea>
+          <div class="presets" aria-label="Примеры промптов">
+            <button type="button" data-prompt="В Анадыре открыли новый пункт помощи рыбакам после сильного ветра">
+              Рыбаки
+            </button>
+            <button type="button" data-prompt="В поселке Лаврентия заработал обновленный медицинский кабинет">
+              Медпункт
+            </button>
+            <button type="button" data-prompt="Школьники из Чукотки подготовили экологическую акцию на берегу залива">
+              Школа
+            </button>
+          </div>
+          <div class="actions">
+            <button id="run-button" type="submit">
+              <span>Запустить</span>
+            </button>
+            <span id="status" class="status">Готово к запуску</span>
+          </div>
+        </form>
+      </section>
+
+      <section class="stages" aria-live="polite">
+        <article class="stage" data-stage="news">
+          <header>
+            <span class="badge">1</span>
+            <div>
+              <h2>Русская новость</h2>
+              <p id="news-caption">LLM пишет полноценный текст новости по промпту.</p>
+            </div>
+          </header>
+          <pre id="news-text">Пока пусто.</pre>
+        </article>
+
+        <article class="stage" data-stage="translation">
+          <header>
+            <span class="badge">2</span>
+            <div>
+              <h2>Чукотский текст</h2>
+              <p id="translation-caption">MT модель переводит готовую русскую новость.</p>
+            </div>
+          </header>
+          <pre id="translation-text">Пока пусто.</pre>
+        </article>
+
+        <article class="stage" data-stage="backtranslation">
+          <header>
+            <span class="badge">3</span>
+            <div>
+              <h2>Обратный перевод</h2>
+              <p>CKT -> RU переводчик показывает примерный смысл чукотского текста.</p>
+            </div>
+          </header>
+          <pre id="backtranslation-text">Пока пусто.</pre>
+        </article>
+
+        <article class="stage" data-stage="tts">
+          <header>
+            <span class="badge">4</span>
+            <div>
+              <h2>Озвучка</h2>
+              <p>Baseline MMS TTS синтезирует аудио и выгружается.</p>
+            </div>
+          </header>
+          <audio id="audio" controls></audio>
+          <p id="audio-meta" class="muted">Аудио появится после синтеза.</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

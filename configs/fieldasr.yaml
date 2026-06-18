@@ -1,0 +1,23 @@
+source:
+  metadata_archive: external/fieldasr/notebook/meta.zip
+  metadata_root: external/fieldasr/metadata
+  transcript_root: external/fieldasr/all_texts
+  download_root: data/raw/fieldasr/downloads
+  local_audio_roots:
+    - data/raw/fieldasr/audio
+    - data/raw/fieldasr/downloads
+  exact_archive_urls: []
+
+output:
+  audio_root: data/processed/asr/fieldasr/audio
+  manifest_root: data/processed/asr/fieldasr
+  report_path: reports/fieldasr_preparation.json
+
+validation:
+  sample_rate: 16000
+  min_duration_sec: 0.5
+  max_duration_sec: 30.0
+  duration_tolerance_sec: 1.0
+  duration_tolerance_ratio: 0.15
+  min_recovery_ratio: 0.9
+  require_all_splits: true

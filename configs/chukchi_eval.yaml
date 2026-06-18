@@ -1,0 +1,36 @@
+input:
+  server_dir: outputs/server
+  limit: null
+
+output:
+  report_path: reports/chukchi_generation_eval.json
+  samples_csv: reports/chukchi_generation_eval_samples.csv
+
+resources:
+  trusted_corpus: data/interim/chukchi_monolingual_trusted.txt
+  mt_ru_ckt_train: data/processed/mt/ru_ckt/train.jsonl
+  asr_clean: data/interim/asr_clean/kept.csv
+  text_lm_model: models/text_lm/chukchi_char4_trusted.json
+
+backtranslation:
+  enabled: true
+  mt_config: configs/mt.yaml
+  direction: ckt_ru
+  model_path: models/checkpoints/mt/ckt_ru/final
+  device: auto
+  max_new_tokens: 160
+  num_beams: 4
+
+thresholds:
+  pass: 0.72
+  weak: 0.55
+  chukchi_lm_keep_margin: -1.4
+  chukchi_lm_reject_margin: -2.1
+  min_lexicon_coverage: 0.45
+  min_morph_score: 0.45
+  min_hygiene_score: 0.75
+  min_semantic_score: 0.35
+  max_repeated_token_share: 0.28
+  max_latin_ratio: 0.02
+  max_han_ratio: 0.0
+  max_russian_stopword_ratio: 0.08

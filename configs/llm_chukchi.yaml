@@ -1,0 +1,55 @@
+experiment:
+  name: qwen2_5_chukchi_form_lora
+  task: llm_chukchi_generation
+
+data:
+  monolingual_trusted: data/interim/chukchi_monolingual_trusted.txt
+  mt_ru_ckt_train: data/processed/mt/ru_ckt/train.jsonl
+  mt_ru_ckt_validation: data/processed/mt/ru_ckt/validation.jsonl
+  asr_clean_kept: data/interim/asr_clean/kept.csv
+  output_dir: data/interim/llm_chukchi
+  train_file: data/interim/llm_chukchi/train.jsonl
+  validation_file: data/interim/llm_chukchi/validation.jsonl
+  report_path: reports/llm_chukchi_dataset.json
+  seed: 777
+  max_monolingual_examples: 30000
+  max_parallel_examples: 12000
+  max_asr_examples: 3000
+  validation_size: 500
+
+model:
+  base_model: Qwen/Qwen2.5-7B-Instruct
+
+training:
+  enabled: true
+  output_dir: models/checkpoints/llm_chukchi_lora
+  max_seq_length: 1024
+  num_train_epochs: 1
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  warmup_steps: 65
+  logging_steps: 10
+  save_steps: 250
+  do_eval: false
+  eval_steps: null
+  prediction_loss_only: false
+  loss_type: chunked_nll
+  auto_resume: true
+  max_train_samples: null
+  max_eval_samples: null
+  bf16: true
+  fp16: false
+  load_in_4bit: true
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj

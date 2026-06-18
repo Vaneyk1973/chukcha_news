@@ -1,0 +1,40 @@
+datasets:
+  hse_parallel_corpus:
+    type: file
+    url: https://huggingface.co/datasets/HSE-Chukchi-NLP/russian-chukchi-parallel-corpora/resolve/main/data.csv
+    target_path: data/raw/hse_parallel_corpus/data.csv
+    description: Russian-Chukchi parallel corpus from HSE Chukchi NLP.
+
+repositories:
+  chukchi_translator:
+    type: git
+    url: https://github.com/hse-chukchi-nlp/chukchi-translator.git
+    target_path: external/chukchi-translator
+    description: Reference repo with notebooks for alignment and MT fine-tuning.
+  finetune_hf_vits:
+    type: git
+    url: https://github.com/ylacombe/finetune-hf-vits.git
+    target_path: external/finetune-hf-vits
+    description: Reference recipe for fine-tuning MMS/VITS TTS models.
+  mms_fairseq:
+    type: git
+    url: https://github.com/facebookresearch/fairseq.git
+    target_path: external/fairseq
+    description: MMS ASR and forced-alignment reference implementation.
+  fieldasr:
+    type: git
+    url: https://github.com/ftyers/fieldasr.git
+    target_path: external/fieldasr
+    description: Chukchi ASR research corpus, source links, and recipes.
+
+metadata:
+  model_cards:
+    - name: mms_asr
+      url: https://huggingface.co/api/models/facebook/mms-1b-all
+      target_path: data/raw/model_cards/facebook_mms_1b_all.json
+    - name: mms_tts_ckt
+      url: https://huggingface.co/api/models/facebook/mms-tts-ckt
+      target_path: data/raw/model_cards/facebook_mms_tts_ckt.json
+    - name: mbart50_rus_ckt
+      url: https://huggingface.co/api/models/HSE-Chukchi-NLP/mbart50-rus-ckt
+      target_path: data/raw/model_cards/hse_mbart50_rus_ckt.json

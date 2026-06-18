@@ -1,0 +1,58 @@
+experiment:
+  name: mms_tts_ckt_top1h
+  task: tts
+
+data:
+  manifest: data/interim/tts_manifest_top1h.jsonl
+  pseudo_label_manifest: data/interim/tts_pseudo_labels.jsonl
+  rejected_manifest: data/interim/tts_pseudo_labels_rejected.jsonl
+  training_dataset_dir: data/interim/tts_hf_dataset_top1h
+  sample_rate: 16000
+  speaker_column: speaker_id
+
+model:
+  base_model: facebook/mms-tts-ckt
+  training_model: models/pretrained/mms-tts-ckt-train
+  language_code: ckt
+
+pseudo_labeling:
+  enabled: true
+  transcriber: facebook/mms-1b-all
+  second_transcriber: null
+  min_duration_sec: 4.0
+  max_duration_sec: 12.0
+  min_confidence: 0.97
+  min_chars_per_sec: 4.0
+  max_chars_per_sec: 22.0
+  max_asr_disagreement_cer: 0.15
+  require_single_speaker: true
+  require_no_music: true
+
+training:
+  enabled: true
+  output_dir: models/checkpoints/tts_top1h
+  config_path: data/interim/tts_training_config_top1h.json
+  train_split_ratio: 0.95
+  seed: 456
+  num_train_epochs: 40
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 1
+  learning_rate: 2.0e-5
+  warmup_steps: 100
+  max_train_samples: null
+  max_eval_samples: 64
+  eval_steps: 50
+  save_steps: 250
+  fp16: true
+  overwrite_output_dir: true
+
+evaluation:
+  samples: 32
+  seed: 456
+  tts_device: auto
+  asr_device: cpu
+  asr_batch_size: 2
+  output_dir: outputs/tts_eval_top1h
+  report_path: reports/tts_eval_top1h.json
+  samples_csv: reports/tts_eval_samples_top1h.csv

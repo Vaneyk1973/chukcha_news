@@ -1,0 +1,26 @@
+project:
+  name: chukcha_news
+  language_codes:
+    source: ru
+    target: ckt
+  stages:
+    - asr
+    - retrieval
+    - generation
+    - mt
+    - tts
+
+paths:
+  local_audio_root: audio
+  raw_data_root: data/raw
+  interim_data_root: data/interim
+  processed_data_root: data/processed
+  manifests_root: data/manifests
+  reports_root: reports
+  external_root: external
+  checkpoints_root: models/checkpoints
+
+models:
+  asr_base: facebook/mms-1b-all
+  mt_base: facebook/nllb-200-distilled-600M
+  tts_base: facebook/mms-tts-ckt

@@ -1,0 +1,115 @@
+server:
+  host: 127.0.0.1
+  port: 9999
+llm:
+  news_backend: hf_qwen
+  hf_news_base_model: models/hf/Qwen--Qwen2.5-7B-Instruct
+  hf_news_load_in_4bit: true
+  hf_news_max_new_tokens: 180
+  news_style: очень короткая радионовость, 1-2 простых предложения, нейтральный официальный
+    стиль
+  direct_chukchi_style: короткая радионовость на чукотском, 1-3 предложения
+  direct_chukchi_backend: hf_lora
+  hf_base_model: models/hf/Qwen--Qwen2.5-7B-Instruct
+  hf_lora_adapter: models/checkpoints/llm_chukchi_lora
+  hf_load_in_4bit: true
+  hf_max_new_tokens: 140
+mt:
+  config: configs/mt_clean.yaml
+  direction: ru_ckt
+  model_path: models/checkpoints/mt_clean/ru_ckt/final
+  backtranslation_direction: ckt_ru
+  backtranslation_model_path: models/checkpoints/mt_clean/ckt_ru/final
+  device: auto
+  max_new_tokens: 96
+  backtranslation_max_new_tokens: 160
+  num_beams: 4
+  no_repeat_ngram_size: 4
+  repetition_penalty: 1.25
+  translation_memory:
+    enabled: true
+    files:
+    - data/processed/mt_clean/ru_ckt/train.jsonl
+    - data/processed/mt_clean/ru_ckt/validation.jsonl
+    - data/processed/mt_clean/ru_ckt/test.jsonl
+    min_similarity: 0.62
+    max_candidates: 60000
+tts:
+  config: configs/tts.yaml
+  model_path: models/hf/facebook--mms-tts-ckt
+  device: auto
+model_options:
+  llm_news:
+    default: hf_qwen
+    choices:
+      hf_qwen:
+        label: HF Qwen 2.5 7B
+        description: Локальный Hugging Face Qwen пишет русскую новость.
+        news_backend: hf_qwen
+        hf_news_base_model: models/hf/Qwen--Qwen2.5-7B-Instruct
+        hf_news_load_in_4bit: true
+        hf_news_max_new_tokens: 180
+  direct_chukchi:
+    default: hf_lora_qwen
+    choices:
+      hf_lora_qwen:
+        label: Qwen 2.5 7B + Chukchi LoRA
+        description: Экспериментальная LoRA генерирует чукотский напрямую.
+        direct_chukchi_backend: hf_lora
+        hf_base_model: models/hf/Qwen--Qwen2.5-7B-Instruct
+        hf_lora_adapter: models/checkpoints/llm_chukchi_lora
+        hf_load_in_4bit: true
+        hf_max_new_tokens: 140
+  mt_ru_ckt:
+    default: clean_guarded
+    choices:
+      clean_guarded:
+        label: Clean MT guarded
+        description: Очищенный корпус, анти-повторы, translation memory.
+        config: configs/mt_clean.yaml
+        model_path: models/checkpoints/mt_clean/ru_ckt/final
+        translation_memory_files:
+        - data/processed/mt_clean/ru_ckt/train.jsonl
+        - data/processed/mt_clean/ru_ckt/validation.jsonl
+        - data/processed/mt_clean/ru_ckt/test.jsonl
+      old_trained:
+        label: Original MT trained
+        description: Первый обученный переводчик на полном смешанном корпусе.
+        config: configs/mt.yaml
+        model_path: models/checkpoints/mt/ru_ckt/final
+        translation_memory_files:
+        - data/processed/mt/ru_ckt/train.jsonl
+        - data/processed/mt/ru_ckt/validation.jsonl
+        - data/processed/mt/ru_ckt/test.jsonl
+  mt_ckt_ru:
+    default: clean
+    choices:
+      clean:
+        label: Clean backtranslator
+        description: Очищенный CKT -> RU переводчик.
+        config: configs/mt_clean.yaml
+        model_path: models/checkpoints/mt_clean/ckt_ru/final
+      old_trained:
+        label: Original backtranslator
+        description: Первый CKT -> RU переводчик.
+        config: configs/mt.yaml
+        model_path: models/checkpoints/mt/ckt_ru/final
+  tts:
+    default: mms_baseline
+    choices:
+      mms_baseline:
+        label: MMS TTS baseline
+        description: Лучший по ASR-CER baseline facebook/mms-tts-ckt.
+        model_path: models/hf/facebook--mms-tts-ckt
+      finetuned_all:
+        label: Finetuned TTS all clean ASR
+        description: Экспериментальный VITS, обучен на всех clean ASR pseudo-labels;
+          звучание сравнить вручную.
+        model_path: models/checkpoints/tts
+      finetuned_top1h:
+        label: Finetuned TTS top 1h
+        description: Экспериментальный VITS, обучен на лучшем часу clean ASR; ASR-CER
+          хуже baseline.
+        model_path: models/checkpoints/tts_top1h
+output:
+  dir: outputs/server

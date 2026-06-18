@@ -1,0 +1,27 @@
+.venv*/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+.tools/
+.secrets/
+.env
+/artifacts/
+/assets/
+/build/
+/outputs/
+
+# Large local assets and reproducible downloads
+/audio/
+/data/
+/reports/
+/models/
+/external/
+/chuk-asr/
+
+*.mp3
+*.pyc
+*.pyo
+*.pyd
